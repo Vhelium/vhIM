@@ -151,6 +151,7 @@ int main(void)
                     }
                     else
                     {
+                        printf("bytes received: %d\n", nbytes);
                         // we got some data from a client
                         for(j=0; j <= fdmax; ++j)
                         {
@@ -158,7 +159,7 @@ int main(void)
                             if (FD_ISSET(j, &master))
                             {
                                 // except the listener (and ourselves)
-                                if (/*j != listener &&*/ j != i)
+                                if (j != listener && j != i)
                                     if (send(j, buf, nbytes, 0) == -1)
                                         perror("send");
                             }
