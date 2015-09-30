@@ -2,24 +2,31 @@
 #define DATAPACKET_H
 
 #include <stdbool.h>
+#include <stdio.h>
+#include "constants.h"
 
-typedef struct Datapacket
+#define PACKET_SIZE 32 
+
+typedef struct
 {
-    byte data[];
-    int index;
+    byte *data;
+    size_t index; // current index, in bytes
+    size_t buf_size; // current buffer size, in bytes
 } datapacket;
 
 datapacket *datapacket_create(int type);
 
-void datapacket_set_boolean(datapacket *dp, bool b);
+void datapacket_set_bool(datapacket *dp, bool b);
 void datapacket_set_int(datapacket *dp, int i);
 void datapacket_set_long(datapacket *dp, long l);
 void datapacket_set_string(datapacket *dp, char *s);
 
-bool datapacket_get_boolean(datapacket *dp);
+bool datapacket_get_bool(datapacket *dp);
 int datapacket_get_int(datapacket *dp);
 long datapacket_get_long(datapacket *dp);
 char *datapacket_get_string(datapacket *dp);
 
-#endif
+void datapacket_reset(datapacket *dp);
+void datapacket_dump(datapacket *dp);
 
+#endif
