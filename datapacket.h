@@ -15,6 +15,7 @@ typedef struct
 } datapacket;
 
 datapacket *datapacket_create(int type);
+datapacket *datapacket_create_from_data(byte *data);
 
 void datapacket_set_bool(datapacket *dp, bool b);
 void datapacket_set_int(datapacket *dp, int i);
@@ -27,6 +28,7 @@ long datapacket_get_long(datapacket *dp);
 char *datapacket_get_string(datapacket *dp);
 
 void datapacket_reset(datapacket *dp);
+int datapacket_finish(datapacket *dp);
 void datapacket_dump(datapacket *dp);
 
 #endif

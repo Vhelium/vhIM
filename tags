@@ -5,10 +5,14 @@
 !_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
 !_TAG_PROGRAM_VERSION	5.8	//
 BYTECONVERTER_H	byteconverter.h	2;"	d
+BYTEPROCESSOR_H	byteprocessor.h	2;"	d
+CLIENT_CH_H	client/client_ch.h	2;"	d
 CONSTANTS_H	constants.h	2;"	d
 CRYPTO_H	crypto.h	2;"	d
 DATAPACKET_H	datapacket.h	2;"	d
+HOST	client/client.c	15;"	d	file:
 PACKET_SIZE	datapacket.h	8;"	d
+PORT	client/client.c	14;"	d	file:
 PORT	server/server.c	11;"	d	file:
 aes_decrypt	crypto.c	/^unsigned char *aes_decrypt(EVP_CIPHER_CTX *e, unsigned char *ciphertext, int *len)$/;"	f
 aes_encrypt	crypto.c	/^unsigned char *aes_encrypt(EVP_CIPHER_CTX *e, unsigned char *plaintext, int *len)$/;"	f
@@ -17,12 +21,19 @@ bc_from_bool	byteconverter.h	/^void bc_from_bool(byte *dest, bool data)$/;"	f
 bc_from_int	byteconverter.h	/^void bc_from_int(byte *dest, int data)$/;"	f
 bc_to_bool	byteconverter.h	/^bool bc_to_bool(byte *data)$/;"	f
 bc_to_int	byteconverter.h	/^int bc_to_int(byte *data)$/;"	f
+bp_process_data	byteprocessor.c	/^void bp_process_data(byte *data, size_t data_len, byte *rest_buffer, size_t *rest_buffer_len, void (*cb)(byte *))$/;"	f
 buf_size	datapacket.h	/^    size_t buf_size; \/\/ current buffer size, in bytes$/;"	m	struct:__anon1
 byte	constants.h	/^typedef unsigned char byte;$/;"	t
+bytes_read	client/client.c	/^static void bytes_read(int b)$/;"	f	file:
+client_ch_destroy	client/client_ch.c	/^void client_ch_destroy()$/;"	f
+client_ch_listen	client/client_ch.c	/^void client_ch_listen(void (*callback)(int))$/;"	f
+client_ch_send	client/client_ch.c	/^void client_ch_send(byte *data)$/;"	f
+client_ch_start	client/client_ch.c	/^int client_ch_start(char *host, int port)$/;"	f
 data	datapacket.h	/^    byte *data;$/;"	m	struct:__anon1
 datapacket	datapacket.h	/^} datapacket;$/;"	t	typeref:struct:__anon1
 datapacket_create	datapacket.c	/^datapacket *datapacket_create(int type)$/;"	f
 datapacket_dump	datapacket.c	/^void datapacket_dump(datapacket *dp)$/;"	f
+datapacket_finish	datapacket.c	/^void datapacket_finish(datapacket *dp)$/;"	f
 datapacket_get_bool	datapacket.c	/^bool datapacket_get_bool(datapacket *dp)$/;"	f
 datapacket_get_int	datapacket.c	/^int datapacket_get_int(datapacket *dp)$/;"	f
 datapacket_get_long	datapacket.c	/^long datapacket_get_long(datapacket *dp)$/;"	f
@@ -35,5 +46,13 @@ datapacket_set_string	datapacket.c	/^void datapacket_set_string(datapacket *dp, 
 datapacket_verify_size	datapacket.c	/^static void datapacket_verify_size(datapacket *dp, size_t additional)$/;"	f	file:
 get_in_addr	server/server.c	/^void *get_in_addr(struct sockaddr *sa)$/;"	f
 index	datapacket.h	/^    size_t index; \/\/ current index, in bytes$/;"	m	struct:__anon1
+main	client/client.c	/^int main(void)$/;"	f
 main	server/server.c	/^int main(void)$/;"	f
 main	test.c	/^int main(void)$/;"	f
+n	client/client_ch.c	/^int sockfd = 0, n = 0;$/;"	v
+process_input	client/client.c	/^void *process_input()$/;"	f
+read_line	client/client.c	/^static int read_line(char str[], int n)$/;"	f	file:
+recvBuff	client/client_ch.c	/^char recvBuff[1024];$/;"	v
+serv_addr	client/client_ch.c	/^struct sockaddr_in serv_addr;$/;"	v	typeref:struct:sockaddr_in
+server	client/client_ch.c	/^struct hostent *server;$/;"	v	typeref:struct:hostent
+sockfd	client/client_ch.c	/^int sockfd = 0, n = 0;$/;"	v

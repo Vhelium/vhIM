@@ -20,8 +20,9 @@ datapacket *datapacket_create_from_data(byte *data)
 {
     datapacket *dp = malloc(sizeof(datapacket));
     dp->index = sizeof(int);
-    dp->buf_size = sizeof(data);
-    dp->data = data;
+    dp->buf_size = PACKET_SIZE;
+    dp->data = malloc(dp->buf_size);
+    datapacket_set_int(dp, type);
     return dp;
 }
 
@@ -121,13 +122,12 @@ void datapacket_reset(datapacket *dp)
     dp->index = sizeof(int); // first 4 bytes are used to indicate packet size!
 }
 
-int datapacket_finish(datapacket *dp)
+void datapacket_finish(datapacket *dp)
 {
     int size = dp->index;
     byte ia[sizeof(int)];
     bc_from_int(ia, size);
     memcpy(dp->data, ia, sizeof(int));
-    return size;
 }
 
 void datapacket_dump(datapacket *dp)

@@ -24,6 +24,7 @@ int main(void)
 
     printf("\ndp data set\n\n");
 
+    datapacket_finish(dp);
     datapacket_dump(dp);
 
     printf("\nreading directly from packet.\n");
