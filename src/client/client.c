@@ -9,7 +9,7 @@
 #include <pthread.h>
 
 #include "client_ch.h"
-#include "../datapacket.h"
+#include "../network/datapacket.h"
 
 #define PORT 55099
 #define HOST "vhelium.com"

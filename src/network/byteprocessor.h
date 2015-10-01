@@ -2,7 +2,7 @@
 #define BYTEPROCESSOR_H
 
 #include <stdlib.h>
-#include "constants.h"
+#include "../constants.h"
 
 /* processes the handled byte data
  * when a whole packet is read, the callback function is called with

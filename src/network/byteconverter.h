@@ -2,7 +2,7 @@
 #define BYTECONVERTER_H
 
 #include <stdbool.h>
-#include "constants.h"
+#include "../constants.h"
 
 void bc_from_bool(byte *dest, bool data);
 

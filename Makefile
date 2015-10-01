@@ -1,11 +1,19 @@
-server: server/server.c crypto.c datapacket.c
-	clang -g -Wall -o bin/server server/server.c crypto.c datapacket.c
+CC = clang
+CFLAGS = -Wall -g -pthreads
 
-client: client/client.c crypto.c datapacket.c
-	clang -g -Wall -o bin/client client/client.c crypto.c datapacket.c
+SRC_SERVER:=$(filter-out src/test.c, $(shell find src -type f -name *.c | grep -v client))
+SRC_CLIENT:=$(filter-out src/test.c, $(shell find src -type f -name *.c | grep -v server))
 
-test: test.c datapacket.c crypto.c
-	clang -g -Wall -o bin/test test.c datapacket.c crypto.c
+server: $(SRC_SERVER)
+	$(CC) $(CFLAGS) -o bin/server $(SRC_SERVER)
+
+client: $(SRC_CLIENT)
+	$(CC) $(CFLAGS) -o bin/client $(SRC_CLIENT)
+
+test: test.c $(SRC_FILES)
+	$(CC) $(CFLAGS) -o bin/test test.c $(SRC_SERVER)
 
 clean:
 	$(rm) bin/server
+	$(rm) bin/client
+	$(rm) bin/test

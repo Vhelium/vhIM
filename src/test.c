@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "datapacket.h"
+#include "network/datapacket.h"
 
 int main(void)
 {

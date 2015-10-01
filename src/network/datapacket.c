@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
-#include "constants.h"
+#include "../constants.h"
 #include "datapacket.h"
 #include "byteconverter.h"
 

@@ -7,9 +7,9 @@
 #include <unistd.h>
 
 #include "client_ch.h"
-#include "../datapacket.h"
+#include "../network/datapacket.h"
 #include "../constants.h"
-#include "../byteprocessor.h"
+#include "../network/byteprocessor.h"
 
 int sockfd = 0, n = 0;
 struct sockaddr_in serv_addr;

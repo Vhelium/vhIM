@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "constants.h"
+#include "../constants.h"
 #include "byteconverter.h"
 
 int bp_process_data(byte *data, size_t data_len, byte *rest_buffer, size_t *rest_buffer_len, void (*cb)(byte *))

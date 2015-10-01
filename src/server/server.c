@@ -8,6 +8,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include "../network/datapacket.h"
+
 #define PORT "55099"
 
 void *get_in_addr(struct sockaddr *sa)
