@@ -1,0 +1,7 @@
+syn keyword CTagsMember index data buf_size
+syn keyword CTagsGlobalVariable sockfd serv_addr server n
+syn keyword CTagsFunction bc_to_bool datapacket_create_from_data aes_decrypt datapacket_finish bp_process_data datapacket_verify_size get_in_addr datapacket_get_long client_ch_destroy bytes_read bc_from_bool datapacket_set_long aes_encrypt datapacket_create client_ch_start datapacket_get_int datapacket_dump bc_to_int datapacket_get_bool datapacket_set_string datapacket_set_int read_line main client_ch_listen datapacket_get_string client_ch_send process_input datapacket_reset bc_from_int aes_init
+syn keyword CTagsFunction datapacket_set_bool
+syn keyword CTagsType byte datapacket
+syn keyword CTagsDefinedName BYTECONVERTER_H DATAPACKET_H CONSTANTS_H PACKET_SIZE HOST BYTEPROCESSOR_H CLIENT_CH_H CRYPTO_H PORT
+

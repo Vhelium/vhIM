@@ -164,11 +164,11 @@ int main(void)
                                         perror("send");
                             }
                         
+                        }
                     }
                 }
             }
-        }
-    }
+    }// end for(;;)
 
     return 0;
 }

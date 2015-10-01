@@ -59,19 +59,19 @@ void client_ch_listen(void (*callback)(byte *))
     byte data_buffer[1024] = {0};
     byte rest_buffer[1024] = {0};
     size_t rest_buffer_len = 0;
+    int res = 1;
 
     printf("start listening..\n");
-    while ((n = read(sockfd, data_buffer, sizeof(data_buffer)-1)) > 0)
-    {
-        bp_process_data(data_buffer, n, rest_buffer, &rest_buffer_len, callback);
 
-//        recvBuff[n] = 0;
-//        if(fputs(recvBuff, stdout) == EOF)
-//            printf("error fputs");
+    while (res && (n = read(sockfd, data_buffer, sizeof(data_buffer)-1)) > 0)
+    {
+        res = bp_process_data(data_buffer, n, rest_buffer, &rest_buffer_len, callback);
     }
 
     if (n<0)
         printf("read error\n");
+    if(!res)
+        printf("bullshit detected\n");
 }
 
 void client_ch_destroy()

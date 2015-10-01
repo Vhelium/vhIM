@@ -5,7 +5,7 @@
 #include "constants.h"
 #include "byteconverter.h"
 
-void bp_process_data(byte *data, size_t data_len, byte *rest_buffer, size_t *rest_buffer_len, void (*cb)(byte *))
+int bp_process_data(byte *data, size_t data_len, byte *rest_buffer, size_t *rest_buffer_len, void (*cb)(byte *))
 {
     bool go = false;
 
@@ -30,6 +30,13 @@ void bp_process_data(byte *data, size_t data_len, byte *rest_buffer, size_t *res
         byte ia[sizeof(int)];
         memcpy(ia, total_data, sizeof(ia));
         int packet_size = bc_to_int(ia);
+
+        if (packet_size < 0)
+        {
+            // bullshit detected
+            printf("bp: negative packet size: %d\n", packet_size);
+            return 0;
+        }
 
         printf("packet size: %d\n", packet_size);
 
@@ -66,4 +73,6 @@ void bp_process_data(byte *data, size_t data_len, byte *rest_buffer, size_t *res
         }
     }
     while(go);
+
+    return 1;
 }
