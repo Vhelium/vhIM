@@ -1,0 +1,20 @@
+#include <stdlib.h>
+#include <string.h>
+#include "server_user.h"
+
+struct server_user *server_user_create(int fd, char *username, char *pwd)
+{
+    struct server_user *user = malloc(sizeof(struct server_user));
+    user->id = -1;
+    user->fd = fd;
+    user->username = malloc(
+}
+
+void server_user_destroy(struct server_user *su)
+{
+    free(su->username);
+    su->id = -1;
+    su->fd = -1;
+    su->username = NULL;
+    free(su);
+}

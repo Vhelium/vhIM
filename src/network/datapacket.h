@@ -30,5 +30,6 @@ char *datapacket_get_string(datapacket *dp);
 void datapacket_reset(datapacket *dp);
 int datapacket_finish(datapacket *dp);
 void datapacket_dump(datapacket *dp);
+void datapacket_destroy(datapacket *dp);
 
 #endif

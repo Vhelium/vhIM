@@ -71,8 +71,6 @@ void datapacket_set_long(datapacket *dp, long l)
 void datapacket_set_string(datapacket *dp, char *s)
 {
     int len = strlen(s);
-    //byte sa[len+1];
-    //bc_from_string(sa, s);
 
     datapacket_verify_size(dp, sizeof(int) + sizeof(char) * (len+1));
 
@@ -102,7 +100,8 @@ int datapacket_get_int(datapacket *dp)
 
 long datapacket_get_long(datapacket *dp)
 {
-
+    //TODO
+    return 0;
 }
 
 char *datapacket_get_string(datapacket *dp)
@@ -146,4 +145,11 @@ void datapacket_dump(datapacket *dp)
     for(i=0; i<index; ++i)
         printf("%02X ", (int)(dp->data)[i]);
     printf("\n");
+}
+
+void datapacket_destroy(datapacket *dp)
+{
+    free(dp->data);
+    dp->data = NULL;
+    free(dp);
 }

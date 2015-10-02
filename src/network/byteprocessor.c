@@ -5,15 +5,15 @@
 #include "../constants.h"
 #include "byteconverter.h"
 
-int bp_process_data(byte *data, size_t data_len, byte *rest_buffer, size_t *rest_buffer_len, void (*cb)(byte *))
+int bp_process_data(byte *data, ssize_t data_len, byte *rest_buffer, size_t *rest_buffer_len, int fd, void (*cb)(int fd, byte *data))
 {
     bool go = false;
 
-    printf("bp: data=");
-    int i;
-    for(i=0; i<data_len; ++i)
-        printf("%02X ", (int)(data)[i]);
-    printf("\n\n");
+//    printf("bp: data=");
+//    int i;
+//    for(i=0; i<data_len; ++i)
+//        printf("%02X ", (int)(data)[i]);
+//    printf("\n\n");
 
     do
     {
@@ -38,14 +38,14 @@ int bp_process_data(byte *data, size_t data_len, byte *rest_buffer, size_t *rest
             return 0;
         }
 
-        printf("packet size: %d\n", packet_size);
+//        printf("packet size: %d\n", packet_size);
 
         if (packet_size < total_data_len) // 'read too much'
         {
             byte *packet = malloc(packet_size);
             memcpy(packet, total_data, packet_size);
 
-            cb(packet);
+            cb(fd, packet);
 
             // copy the overflow into the buffer and adjust its size
             *rest_buffer_len = total_data_len - packet_size;
@@ -61,7 +61,7 @@ int bp_process_data(byte *data, size_t data_len, byte *rest_buffer, size_t *rest
                 byte *packet = malloc(packet_size);
                 memcpy(packet, total_data, packet_size);
 
-                cb(packet);
+                cb(fd, packet);
             }
             else
             {

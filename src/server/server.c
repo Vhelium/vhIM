@@ -8,169 +8,194 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include "gdsl_types.h"
+#include "gdsl_rbtree.h"
+
+#include "server_ch.h"
 #include "../network/datapacket.h"
+#include "../network/messagetypes.h"
+#include "server_user.h"
 
 #define PORT "55099"
 
-void *get_in_addr(struct sockaddr *sa)
-{
-    if(sa->sa_family == AF_INET)
-    {
-        return &(((struct sockaddr_in*)sa)->sin_addr);
-    }
+static gdsl_rbtree_t users;
+static struct server_user *users_cnt;
 
-    return &(((struct sockaddr_in6*)sa)->sin6_addr);
+// Callback Functions
+static void cb_cl_cntd(int fd);
+static void cb_msg_rcv(int fd, byte *data);
+static void cb_cl_dc(int fd);
+
+// User Data Structure Interface
+static int add_server_user(struct server_user *su);
+static struct server_user *search_server_user(int id);
+static void remove_server_user(int id);
+
+// User Management
+static struct server_user *authorize_user(int fd, char* username, char* pwd);
+
+// Message Passing
+static int send_to_user(int id, byte *data);
+static int send_to_all(byte *data);
+
+// compare [server_user] with [server_user]
+static long int compare_user_id(const gdsl_element_t E, void *VALUE)
+{
+    return ((struct server_user *)E)->id - ((struct server_user *)VALUE)->id;
 }
 
-void sendPacket();
+// compare [server_user] with [user_id]
+static long int compare_user_id_directly(const gdsl_element_t E, void *VALUE)
+{
+    return ((struct server_user *)E)->id - *((int *)VALUE);
+}
 
-void receivePacket();
+static void server_init()
+{
+    users = gdsl_rbtree_alloc("USERS", NULL, NULL, &compare_user_id);
+}
 
 int main(void)
 {
-    fd_set master;      // master file descriptor list
-    fd_set read_fds;    // temp file descriptor list for select()
-    int fdmax;          // maximum file descriptor number
+    server_init();
 
-    int listener;       // listening socket descriptor
-    int newfd;          // newly accept()ed socket descriptor
-    struct sockaddr_storage remoteaddr;     //client address
-    socklen_t addrlen;
+    server_ch_start(PORT);
 
-    char buf[256];      // buffer for client data;
-    int nbytes;
+    server_ch_listen(&cb_cl_cntd, &cb_msg_rcv, &cb_cl_dc);
 
-    char remoteIP[INET6_ADDRSTRLEN];
-
-    int yes=1;          // for setsockopt()
-    int i, j, rv;
-
-    struct addrinfo hints, *ai, *p;
-
-    FD_ZERO(&master);   // clear master and temp sets
-    FD_ZERO(&read_fds);
-
-    // get the socket and bind it
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-
-    if((rv = getaddrinfo(NULL, PORT, &hints, &ai)) != 0)
-    {
-        fprintf(stderr, "selectserver: %s\n", gai_strerror(rv));
-        exit(1);
-    }
-
-    for(p = ai; p != NULL; p = p->ai_next)
-    {
-        listener = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-        if(listener < 0)
-            continue;
-
-        // ignore "adress already in use" spam
-        setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-
-        if(bind(listener, p->ai_addr, p->ai_addrlen) < 0)
-        {
-            close(listener);
-            continue;
-        }
-
-        break;
-    }
-
-    // check if socket is bound
-    if(p == NULL)
-    {
-        fprintf(stderr, "selectserver: failed to bind\n");
-        exit(2);
-    }
-
-    freeaddrinfo(ai); // no need for it again
-
-    // listen
-    if(listen(listener, 10) == -1)
-    {
-        perror("listen");
-        exit(3);
-    }
-
-    // add listener to master set
-    FD_SET(listener, &master);
-
-    // keep track of biggest file descriptor'
-    fdmax = listener; //currently it's this one
-
-    // main loop
-    for(;;)
-    {
-        read_fds = master;  // copy it
-        if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1)
-        {
-            perror("select");
-            exit(4);
-        }
-
-        // run through existing connections looking for data to read
-        for(i = 0; i <= fdmax; ++i)
-            if(FD_ISSET(i, &read_fds)) // found sth
-            {
-                if (i == listener)
-                {
-                    // handle new connections
-                    addrlen = sizeof(remoteaddr);
-                    newfd = accept(listener, (struct sockaddr *)&remoteaddr, &addrlen);
-
-                    if (newfd == -1)
-                        perror("accept");
-                    else
-                    {
-                        FD_SET(newfd, &master); // add to master set
-                        if (newfd > fdmax)      // keep track of max
-                            fdmax = newfd;
-                        printf("selectserver: new connection from %s on socket %d\n",
-                                inet_ntop(remoteaddr.ss_family,
-                                    get_in_addr((struct sockaddr*)&remoteaddr),
-                                    remoteIP, INET6_ADDRSTRLEN), newfd);
-                    }
-                }
-                else
-                {
-                    // handle data from a client
-                    if ((nbytes = recv(i, buf, sizeof(buf), 0)) <= 0)
-                    {
-                        // got error or connection closed by client
-                        if (nbytes == 0)
-                        {
-                            // connection closed
-                            printf("selectserver: socket %d hung up\n", i);
-                        }
-                        else
-                            perror("recv");
-                        close(i);
-                        FD_CLR(i, &master); // remove from master set
-                    }
-                    else
-                    {
-                        printf("bytes received: %d\n", nbytes);
-                        // we got some data from a client
-                        for(j=0; j <= fdmax; ++j)
-                        {
-                            // send it to everyone, yayy
-                            if (FD_ISSET(j, &master))
-                            {
-                                // except the listener (and ourselves)
-                                if (j != listener && j != i)
-                                    if (send(j, buf, nbytes, 0) == -1)
-                                        perror("send");
-                            }
-                        
-                        }
-                    }
-                }
-            }
-    }// end for(;;)
+    server_ch_destroy();
 
     return 0;
+}
+
+static void process_packet(int fd, byte *data)
+{
+    datapacket *dp = datapacket_create_from_data(data);
+    int packet_type = datapacket_get_int(dp);
+
+    char *uname;
+
+    switch(packet_type) {
+        case MSG_LOGIN:
+            uname = datapacket_get_string(dp);
+            printf("Login as: %s", uname);
+
+            struct server_user *user;
+            if (user = authorize_user(fd, uname, NULL)) {
+                int r = add_server_user(user);
+
+                datapacket *answer = datapacket_create(MSG_WELCOME);
+                datapacket_set_string(answer, uname);
+                size_t s = datapacket_finish(answer);
+                server_ch_send(fd, answer->data, s);
+            }
+            else {
+                datapacket *answer = datapacket_create(MSG_AUTH_FAILED);
+                datapacket_set_string(answer, "Authentification failed.");
+                size_t s = datapacket_finish(answer);
+                server_ch_send(fd, answer->data, s);
+            }
+            free(uname);
+        break;
+
+        case MSG_BROADCAST:
+        {
+            char *msg = datapacket_get_string(dp);
+            // TODO: get userid from fd..
+            char name[32];
+            sprintf(name, "User%d", fd);
+            printf("Bcst [%s]: %s\n",name, msg);
+
+            datapacket *answer = datapacket_create(MSG_BROADCAST);
+            datapacket_set_string(answer, name);
+            datapacket_set_string(answer, msg);
+            size_t s = datapacket_finish(answer);
+            server_ch_send_all(fd, answer->data, s);
+
+            free(msg);
+        }
+        break;
+
+        default:
+            printf("Unknown packet: %d", packet_type);
+            break;
+    }
+
+    datapacket_destroy(dp); // destroy the dp with its data array
+}
+
+/*
+ * Callback Functions
+ */
+static void cb_cl_cntd(int fd)
+{
+    printf("Client connected with file descriptor #%d\n", fd);
+}
+
+static void cb_msg_rcv(int fd, byte *data)
+{
+    printf("Message received from client with fd #%d\n", fd);
+    process_packet(fd, data);
+}
+
+static void cb_cl_dc(int fd)
+{
+    printf("Client disconnected with file descriptor #%d\n", fd);
+}
+
+/*
+ * User Management
+ */
+static int get_fd_for_user(int user_id)
+{
+    struct server_user *su = search_server_user(user_id);
+    return su->fd;
+}
+
+static struct server_user *authorize_user(int fd, char *username, char* pwd)
+{
+    struct server_user *user = NULL;
+    if (true) {
+        user = server_user_create(1, fd, username);
+    }
+    //TODO
+    return user;
+}
+
+/*
+ * Message Passing
+ */
+static int send_to_user(int id, byte *data)
+{
+    
+}
+
+static int send_to_all(byte *data)
+{
+
+}
+
+/*
+ * User Data Structure Interface
+ */
+static int add_server_user(struct server_user *su)
+{
+    int rc;
+    gdsl_rbtree_insert(users, (void *)su, &rc);
+    return rc;
+}
+
+static struct server_user *search_server_user(int id)
+{
+    return gdsl_rbtree_search(users, &compare_user_id_directly, &id);
+}
+
+static void remove_server_user(int id)
+{
+    struct server_user *su = search_server_user(id);
+    if (su != NULL)
+    {
+        gdsl_rbtree_remove(users, su);
+        server_user_destroy(su);
+    }
 }

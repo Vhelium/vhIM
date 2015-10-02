@@ -11,9 +11,9 @@
 #include "../constants.h"
 #include "../network/byteprocessor.h"
 
-int sockfd = 0, n = 0;
-struct sockaddr_in serv_addr;
-struct hostent *server;
+static int sockfd = 0;
+static struct sockaddr_in serv_addr;
+static struct hostent *server;
 
 int client_ch_start(char *host, int port)
 {
@@ -42,33 +42,37 @@ int client_ch_start(char *host, int port)
         printf("\nError: connection failed \n");
         return 3;
     }
+
+    return 0;
 }
 
 void client_ch_send(byte *data, size_t data_len)
 {
-    printf("sending a message..\n");
+//    printf("sending a message..\n");
     char *sendBuff = (char *)data;
-    n = write(sockfd, sendBuff, data_len);
-    if (n<0)
+    ssize_t nbytes = write(sockfd, sendBuff, data_len);
+    if (!nbytes)
         printf("error sending.\n");
-    printf("bytes sent: %d\n", n);
+//    printf("bytes sent: %ld\n", nbytes);
 }
 
-void client_ch_listen(void (*callback)(byte *))
+void client_ch_listen(void (*callback)(int fd, byte *data))
 {
     byte data_buffer[1024] = {0};
+    ssize_t nbytes = 0; 
     byte rest_buffer[1024] = {0};
     size_t rest_buffer_len = 0;
     int res = 1;
 
     printf("start listening..\n");
 
-    while (res && (n = read(sockfd, data_buffer, sizeof(data_buffer)-1)) > 0)
+    while (res && (nbytes = read(sockfd, data_buffer, sizeof(data_buffer)-1)) > 0)
     {
-        res = bp_process_data(data_buffer, n, rest_buffer, &rest_buffer_len, callback);
+        res = bp_process_data(data_buffer, nbytes,
+                rest_buffer, &rest_buffer_len, sockfd, callback);
     }
 
-    if (n<0)
+    if (nbytes<0)
         printf("read error\n");
     if(!res)
         printf("bullshit detected\n");

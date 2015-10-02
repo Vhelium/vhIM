@@ -7,7 +7,7 @@ int client_ch_start();
 
 void client_ch_send(byte *data, size_t data_len);
 
-void client_ch_listen(void (*callback)(byte *));
+void client_ch_listen(void (*callback)(int fd, byte *data));
 
 void client_ch_destroy();
 

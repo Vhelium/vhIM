@@ -12,6 +12,7 @@
  * returns:
  *      1, if processing was successfull
  *      0, if processing didn't happen (e.g. negative packet size provided) */
-int bp_process_data(byte *data, size_t data_len, byte *rest_buffer, size_t *rest_buffer_len, void (*cb)(byte *));
+int bp_process_data(byte *data, size_t data_len,byte *rest_buffer,
+        size_t *rest_buffer_len, int fd, void (*cb)(int fd, byte *data));
 
 #endif
