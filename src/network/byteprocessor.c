@@ -6,16 +6,20 @@
 #include "byteprocessor.h"
 #include "byteconverter.h"
 
+#define LOG 1
+
 int bp_process_data(byte *data, ssize_t data_len, byte *rest_buffer,
         size_t *rest_buffer_len, void *sender, callback_msg_rcv_t cb_msg_rcv)
 {
     bool go = false;
 
-//    printf("bp: data=");
-//    int i;
-//    for(i=0; i<data_len; ++i)
-//        printf("%02X ", (int)(data)[i]);
-//    printf("\n\n");
+    if (LOG) {
+        printf("bp: data=");
+        int i;
+        for(i=0; i<data_len; ++i)
+            printf("%02X ", (int)(data)[i]);
+        printf("\n\n");
+    }
 
     do
     {

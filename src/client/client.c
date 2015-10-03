@@ -89,7 +89,7 @@ void *process_input()
     }
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
     printf("Enter a username: ");
     char nBuf[126+1];
@@ -98,7 +98,11 @@ int main(void)
         n = read_line(nBuf, 126);
     printf("\n\n");
 
-    client_ch_start(HOST, PORT);
+    char *host = HOST;
+    if (argc >= 2)
+        host = argv[1];
+
+    client_ch_start(host, PORT);
 
     datapacket *answer = datapacket_create(MSG_LOGIN);
     datapacket_set_string(answer, nBuf);

@@ -28,7 +28,7 @@ SSL_CTX* init_ctx(void)
 
     OpenSSL_add_all_algorithms();       /* Load cryptos, et.al. */
     SSL_load_error_strings();           /* Bring in and register error messages */
-    method = SSLv2_client_method();     /* Create new client-method instance */
+    method = SSLv3_client_method();     /* Create new client-method instance */
     ctx = SSL_CTX_new(method);          /* Create new context */
     if ( ctx == NULL ) {
         ERR_print_errors_fp(stderr);
@@ -60,6 +60,7 @@ void show_certs(SSL* ssl)
 int client_ch_start(char *host, int port)
 {
     // initialize SSL
+    SSL_library_init();
     ctx = init_ctx();
 
     // set up TCP connection
@@ -91,7 +92,9 @@ int client_ch_start(char *host, int port)
 
     ssl = SSL_new(ctx);
     SSL_set_fd(ssl, sockfd);
+    show_certs(ssl);
     if (SSL_connect(ssl) == -1) {
+        printf("couldn't connect to server:\n");
         ERR_print_errors_fp(stderr);
         close(sockfd);
         SSL_CTX_free(ctx);
@@ -105,7 +108,7 @@ void client_ch_send(byte *data, size_t data_len)
 {
 //    printf("sending a message..\n");
     char *sendBuff = (char *)data;
-    ssize_t nbytes = write(sockfd, sendBuff, data_len);
+    ssize_t nbytes = SSL_write(ssl, sendBuff, data_len);
     if (!nbytes)
         printf("error sending.\n");
 //    printf("bytes sent: %ld\n", nbytes);
@@ -121,7 +124,7 @@ void client_ch_listen(callback_msg_rcv_t cb_msg_rcv)
 
     printf("start listening..\n");
 
-    while (res && (nbytes = read(sockfd, data_buffer, sizeof(data_buffer)-1)) > 0)
+    while (res && (nbytes = SSL_read(ssl, data_buffer, sizeof(data_buffer))) > 0)
     {
         res = bp_process_data(data_buffer, nbytes,
                 rest_buffer, &rest_buffer_len, &sockfd, cb_msg_rcv);
