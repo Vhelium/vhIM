@@ -19,7 +19,6 @@
 #define PORT "55099"
 
 static gdsl_rbtree_t users;
-static gdsl_rbtree_t users_unauth;
 
 // Callback Functions
 static void cb_cl_cntd(int fd);
@@ -28,7 +27,7 @@ static void cb_cl_dc(int fd);
 
 // User Data Structure Interface
 static int add_server_user(struct server_user *su);
-static struct server_user *get_user_by_fd(int fd)
+static struct server_user *get_user_by_fd(int fd);
 static struct server_user *get_user_by_id(int id);
 static void remove_server_user(int id);
 
@@ -36,8 +35,8 @@ static void remove_server_user(int id);
 static struct server_user *authorize_user(int fd, char* username, char* pwd);
 
 // Message Passing
-static int send_to_user(int id, byte *data);
-static int send_to_all(byte *data);
+static int send_to_user(struct server_user *u_to, datapacket *dp);
+static int send_to_all(struct server_user *u_from, datapacket *dp);
 
 // compare [server_user] with [server_user]
 static long int compare_user_id(const gdsl_element_t E, void *VALUE)
@@ -54,7 +53,6 @@ static long int compare_user_id_directly(const gdsl_element_t E, void *VALUE)
 static void server_init()
 {
     users = gdsl_rbtree_alloc("USERS", NULL, NULL, &compare_user_id);
-    users_unauth = gdsl_rbtree_alloc("USERS_UNAUTH", NULL, NULL, &compare_user_id);
 }
 
 int main(void)
@@ -84,8 +82,8 @@ static void handle_packet_auth(struct server_user *user, datapacket *dp)
             datapacket *answer = datapacket_create(MSG_BROADCAST);
             datapacket_set_string(answer, name);
             datapacket_set_string(answer, msg);
-            size_t s = datapacket_finish(answer);
-            server_ch_send_all(fd, answer->data, s);
+
+            send_to_all(user, answer);
 
             free(msg);
         }
@@ -107,7 +105,7 @@ static void handle_packet_unauth(int fd, datapacket *dp)
             printf("Login as: %s", uname);
 
             struct server_user *user;
-            if (user = authorize_user(fd, uname, NULL)) {
+            if ((user = authorize_user(fd, uname, NULL))) {
                 int r = add_server_user(user);
 
                 datapacket *answer = datapacket_create(MSG_WELCOME);
@@ -164,22 +162,20 @@ static void cb_msg_rcv(int fd, byte *data)
 static void cb_cl_dc(int fd)
 {
     printf("Client disconnected with file descriptor #%d\n", fd);
+    struct server_user *user = get_user_by_fd(fd);
+    if (user)
+        remove_server_user(user->id);
 }
 
 /*
  * User Management
  */
-static int get_fd_for_user(int user_id)
-{
-    struct server_user *su = search_server_user(user_id);
-    return su->fd;
-}
 
 static struct server_user *authorize_user(int fd, char *username, char* pwd)
 {
     struct server_user *user = NULL;
     if (true) {
-        user = server_user_create(1, fd, username);
+        user = server_user_create(fd, fd, username);
     }
     //TODO
     return user;
@@ -188,14 +184,43 @@ static struct server_user *authorize_user(int fd, char *username, char* pwd)
 /*
  * Message Passing
  */
-static int send_to_user(int id, byte *data)
+static int send_to_user(struct server_user *u_to, datapacket *dp)
 {
-    
+    size_t s = datapacket_finish(dp);
+    server_ch_send(u_to->fd, dp->data, s);
+
+    return 0;
 }
 
-static int send_to_all(byte *data)
+static int map_send_to_user(const gdsl_element_t e, gdsl_location_t l, void *ud)
 {
+    struct tripplet {
+        int fd_from;
+        void *data;
+        size_t data_len;
+    } *d = (struct tripplet *)ud;
 
+    int fd_target = ((struct server_user *)e)->fd;
+
+    if (fd_target != d->fd_from)
+        server_ch_send(fd_target, d->data, d->data_len);
+
+    return GDSL_MAP_CONT;
+}
+
+static int send_to_all(struct server_user *u_from, datapacket *dp)
+{
+    size_t data_len = datapacket_finish(dp);
+
+    struct tripplet {
+        int fd_from;
+        void *data;
+        size_t data_len;
+    } dp_data = { u_from->fd, dp->data, data_len };
+
+    gdsl_rbtree_map_infix(users, &map_send_to_user, &dp_data);
+
+    return 0;
 }
 
 /*
@@ -208,15 +233,15 @@ static int add_server_user(struct server_user *su)
     return rc;
 }
 
-static int map_user_by_fd(const gdsl_element_t e, gdsl_location l, void *userdata)
+static int map_user_by_fd(const gdsl_element_t e, gdsl_location_t l, void *userdata)
 {
-    int fd = &((int *)userdata);
+    int fd = *((int *)userdata);
     return ((struct server_user *)e)->fd == fd ? GDSL_MAP_STOP : GDSL_MAP_CONT;
 }
 
 static struct server_user *get_user_by_fd(int fd)
 {
-    struct server_user *user = gdsl_rbtree_map_prefix(users, &map_user_by_fd, &fd);
+    return gdsl_rbtree_map_infix(users, &map_user_by_fd, &fd);
 }
 
 static struct server_user *get_user_by_id(int id)
