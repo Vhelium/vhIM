@@ -91,10 +91,17 @@ void *process_input()
 
 int main(void)
 {
+    printf("Enter a username: ");
+    char nBuf[126+1];
+    int n = 0;
+    while (n <= 0)
+        n = read_line(nBuf, 126);
+    printf("\n\n");
+
     client_ch_start(HOST, PORT);
 
     datapacket *answer = datapacket_create(MSG_LOGIN);
-    datapacket_set_string(answer, "Vhelium");
+    datapacket_set_string(answer, nBuf);
     size_t s = datapacket_finish(answer);
     client_ch_send(answer->data, s);
 
