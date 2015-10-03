@@ -89,7 +89,7 @@ static void handle_packet_auth(struct server_user *user, datapacket *dp)
         break;
 
         default:
-            printf("Unknown packet(auth): %d", packet_type);
+            errv("Unknown packet(auth): %d", packet_type);
             break;
     }
 }
@@ -101,7 +101,7 @@ static void handle_packet_unauth(SSL *ssl, datapacket *dp)
     switch(packet_type) {
         case MSG_LOGIN: {
             char *uname = datapacket_get_string(dp);
-            printf("Login as: %s", uname);
+            printf("User logging in as: %s\n", uname);
 
             struct server_user *user;
             if ((user = authorize_user(ssl, uname, NULL))) {
@@ -124,7 +124,7 @@ static void handle_packet_unauth(SSL *ssl, datapacket *dp)
         break;
 
         default:
-            printf("Unknown packet(unauth): %d", packet_type);
+            errv("Unknown packet(unauth): %d", packet_type);
             break;
     }
 }
@@ -159,7 +159,7 @@ static void cb_cl_cntd(struct server_client *sc)
 
 static void cb_msg_rcv(void *sc, byte *data)
 {
-    printf("Message received from client with fd #%d\n",
+    debugv("Message received from client with fd #%d\n",
             sc_fd((struct server_client *)sc));
     process_packet(((struct server_client *)sc), data);
 }

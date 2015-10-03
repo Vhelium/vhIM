@@ -10,14 +10,16 @@ CLIENT_CH_H	client/client_ch.h	2;"	d
 CONSTANTS_H	constants.h	2;"	d
 CRYPTO_H	crypto/crypto.h	2;"	d
 DATAPACKET_H	network/datapacket.h	2;"	d
-HOST	client/client.c	17;"	d	file:
+DEBUG	constants.h	8;"	d
+HOST	client/client.c	18;"	d	file:
+LOG	network/byteprocessor.c	9;"	d	file:
 MESSAGETYPES_H	network/messagetypes.h	2;"	d
 MSG_AUTH_FAILED	network/messagetypes.h	6;"	d
 MSG_BROADCAST	network/messagetypes.h	7;"	d
 MSG_LOGIN	network/messagetypes.h	4;"	d
 MSG_WELCOME	network/messagetypes.h	5;"	d
 PACKET_SIZE	network/datapacket.h	8;"	d
-PORT	client/client.c	16;"	d	file:
+PORT	client/client.c	17;"	d	file:
 PORT	server/server.c	19;"	d	file:
 SERVER_CH_H	server/server_ch.h	2;"	d
 SERVER_CLIENT_H	server/server_client.h	2;"	d
@@ -26,7 +28,7 @@ add_server_user	server/server.c	/^static int add_server_user(struct server_user 
 aes_decrypt	crypto/crypto.c	/^unsigned char *aes_decrypt(EVP_CIPHER_CTX *e, unsigned char *ciphertext, int *len)$/;"	f
 aes_encrypt	crypto/crypto.c	/^unsigned char *aes_encrypt(EVP_CIPHER_CTX *e, unsigned char *plaintext, int *len)$/;"	f
 aes_init	crypto/crypto.c	/^int aes_init(unsigned char *key_data, int key_data_len, unsigned char *salt,$/;"	f
-authorize_user	server/server.c	/^static struct server_user *authorize_user(int fd, char *username, char* pwd)$/;"	f	file:
+authorize_user	server/server.c	/^static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd)$/;"	f	file:
 bc_from_bool	network/byteconverter.c	/^void bc_from_bool(byte *dest, bool data)$/;"	f
 bc_from_int	network/byteconverter.c	/^void bc_from_int(byte *dest, int data)$/;"	f
 bc_to_bool	network/byteconverter.c	/^bool bc_to_bool(byte *data)$/;"	f
@@ -49,6 +51,7 @@ compare_user_fd_directly	server/server_ch.c	/^static long int compare_user_fd_di
 compare_user_fd	server/server_ch.c	/^static long int compare_user_fd(const gdsl_element_t E, void *VALUE)$/;"	f	file:
 compare_user_id_directly	server/server.c	/^static long int compare_user_id_directly(const gdsl_element_t E, void *VALUE)$/;"	f	file:
 compare_user_id	server/server.c	/^static long int compare_user_id(const gdsl_element_t E, void *VALUE)$/;"	f	file:
+ctx	client/client_ch.c	/^SSL_CTX *ctx;$/;"	v
 ctx	server/server_ch.c	/^static SSL_CTX *ctx;$/;"	v	file:
 data	network/datapacket.h	/^    byte *data;$/;"	m	struct:__anon1
 datapacket_create_from_data	network/datapacket.c	/^datapacket *datapacket_create_from_data(byte *data)$/;"	f
@@ -67,19 +70,21 @@ datapacket_set_long	network/datapacket.c	/^void datapacket_set_long(datapacket *
 datapacket_set_string	network/datapacket.c	/^void datapacket_set_string(datapacket *dp, char *s)$/;"	f
 datapacket_verify_size	network/datapacket.c	/^static void datapacket_verify_size(datapacket *dp, size_t additional)$/;"	f	file:
 datapacket	network/datapacket.h	/^} datapacket;$/;"	t	typeref:struct:__anon1
+debugv	constants.h	10;"	d
+errv	constants.h	14;"	d
 fdmax	server/server_ch.c	/^static int fdmax;          \/\/ maximum file descriptor number$/;"	v	file:
-fd	server/server_client.h	/^    int fd;$/;"	m	struct:server_client
-fd	server/server_user.h	/^    int fd;$/;"	m	struct:server_user
+get_client_by_fd	server/server_ch.c	/^static struct server_client *get_client_by_fd(int fd)$/;"	f	file:
 get_user_by_id	server/server.c	/^static struct server_user *get_user_by_id(int id)$/;"	f	file:
 handle_packet_auth	server/server.c	/^static void handle_packet_auth(struct server_user *user, datapacket *dp)$/;"	f	file:
-handle_packet_unauth	server/server.c	/^static void handle_packet_unauth(int fd, datapacket *dp)$/;"	f	file:
+handle_packet_unauth	server/server.c	/^static void handle_packet_unauth(SSL *ssl, datapacket *dp)$/;"	f	file:
 id	server/server_client.h	/^    int id;$/;"	m	struct:server_client
 id	server/server_user.h	/^    int id;$/;"	m	struct:server_user
 index	network/datapacket.h	/^    size_t index; \/\/ current index, in bytes$/;"	m	struct:__anon1
+init_ctx	client/client_ch.c	/^SSL_CTX* init_ctx(void)$/;"	f
 init_server_ctx	server/server_ch.c	/^static SSL_CTX *init_server_ctx(void)$/;"	f	file:
 listener	server/server_ch.c	/^static int listener;       \/\/ listening socket descriptor$/;"	v	file:
 load_certificates	server/server_ch.c	/^static void load_certificates(SSL_CTX* ctx, char* CertFile, char* KeyFile)$/;"	f	file:
-main	client/client.c	/^int main(void)$/;"	f
+main	client/client.c	/^int main(int argc, char *argv[])$/;"	f
 main	server/server.c	/^int main(void)$/;"	f
 main	test.c	/^int main(void)$/;"	f
 map_send_to_user	server/server.c	/^static int map_send_to_user(const gdsl_element_t e, gdsl_location_t l, void *ud)$/;"	f	file:
@@ -90,27 +95,30 @@ process_packet	server/server.c	/^static void process_packet(struct server_client
 read_fds	server/server_ch.c	/^static fd_set read_fds;    \/\/ temp file descriptor list for select()$/;"	v	file:
 read_line	client/client.c	/^static int read_line(char str[], int n)$/;"	f	file:
 remove_server_user	server/server.c	/^static void remove_server_user(int id)$/;"	f	file:
+sc_fd	server/server_client.c	/^int sc_fd(struct server_client *sc)$/;"	f
 send_to_all	server/server.c	/^static int send_to_all(struct server_user *u_from, datapacket *dp)$/;"	f	file:
 send_to_user	server/server.c	/^static int send_to_user(struct server_user *u_to, datapacket *dp)$/;"	f	file:
 serv_addr	client/client_ch.c	/^static struct sockaddr_in serv_addr;$/;"	v	typeref:struct:sockaddr_in	file:
 server_ch_destroy	server/server_ch.c	/^void server_ch_destroy()$/;"	f
 server_ch_listen	server/server_ch.c	/^void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,$/;"	f
-server_ch_send_all	server/server_ch.c	/^void server_ch_send_all(int fd_from, byte *data, size_t data_len)$/;"	f
-server_ch_send	server/server_ch.c	/^void server_ch_send(int fd, byte *data, size_t data_len)$/;"	f
+server_ch_send	server/server_ch.c	/^void server_ch_send(SSL *ssl, byte *data, size_t data_len)$/;"	f
 server_ch_start	server/server_ch.c	/^int server_ch_start(char *port)$/;"	f
-server_ch_user_authed	server/server_ch.c	/^void server_ch_user_authed(int id, int fd)$/;"	f
+server_ch_user_authed	server/server_ch.c	/^void server_ch_user_authed(int id, SSL *ssl)$/;"	f
 server_ch_user_connected	server/server_ch.c	/^static void server_ch_user_connected(int fd, SSL *ssl, callback_cl_cntd_t cb_cl_cntd)$/;"	f	file:
 server_ch_user_disconnected	server/server_ch.c	/^static void server_ch_user_disconnected(int fd, callback_cl_dc cb_cl_dc)$/;"	f	file:
-server_client_create	server/server_client.c	/^struct server_client *server_client_create(int id, int fd, SSL *ssl)$/;"	f
+server_client_create	server/server_client.c	/^struct server_client *server_client_create(int id, SSL *ssl)$/;"	f
 server_client_destroy	server/server_client.c	/^void server_client_destroy(struct server_client *sc)$/;"	f
 server_client	server/server_client.h	/^struct server_client$/;"	s
 server_init	server/server.c	/^static void server_init()$/;"	f	file:
-server_user_create	server/server_user.c	/^struct server_user *server_user_create(int id, int fd, char *username)$/;"	f
+server_user_create	server/server_user.c	/^struct server_user *server_user_create(int id, SSL *ssl, char *username)$/;"	f
 server_user_destroy	server/server_user.c	/^void server_user_destroy(struct server_user *su)$/;"	f
 server_user	server/server_user.h	/^struct server_user$/;"	s
 server	client/client_ch.c	/^static struct hostent *server;$/;"	v	typeref:struct:hostent	file:
+show_certs	client/client_ch.c	/^void show_certs(SSL* ssl)$/;"	f
 show_certs	server/server_ch.c	/^static void show_certs(SSL *ssl)$/;"	f	file:
 sockfd	client/client_ch.c	/^static int sockfd = 0;$/;"	v	file:
 ssl	server/server_client.h	/^    SSL *ssl;$/;"	m	struct:server_client
+ssl	server/server_user.h	/^    SSL *ssl;$/;"	m	struct:server_user
+ssl	client/client_ch.c	/^SSL *ssl;$/;"	v
 username	server/server_user.h	/^    char *username;$/;"	m	struct:server_user
 users	server/server.c	/^static gdsl_rbtree_t users;$/;"	v	file:

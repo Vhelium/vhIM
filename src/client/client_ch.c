@@ -9,6 +9,7 @@
 #include "openssl/ssl.h"
 #include "openssl/err.h"
 
+#include "../constants.h"
 #include "client_ch.h"
 #include "../network/datapacket.h"
 #include "../constants.h"
@@ -66,14 +67,14 @@ int client_ch_start(char *host, int port)
     // set up TCP connection
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        printf("\nError: couldn't create socket, lel\n");
+        errv("\nError: couldn't create socket, lel\n");
         return 1;
     }
 
     server = gethostbyname(host);
     if (server == NULL)
     {
-        printf("Error: host not found");
+        errv("Error: host not found");
         return 4;
     }
 
@@ -86,7 +87,7 @@ int client_ch_start(char *host, int port)
 
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
-        printf("\nError: connection failed \n");
+        errv("\nError: connection failed \n");
         return 3;
     }
 
@@ -94,7 +95,7 @@ int client_ch_start(char *host, int port)
     SSL_set_fd(ssl, sockfd);
     show_certs(ssl);
     if (SSL_connect(ssl) == -1) {
-        printf("couldn't connect to server:\n");
+        errv("couldn't connect to server:\n");
         ERR_print_errors_fp(stderr);
         close(sockfd);
         SSL_CTX_free(ctx);
@@ -106,12 +107,10 @@ int client_ch_start(char *host, int port)
 
 void client_ch_send(byte *data, size_t data_len)
 {
-//    printf("sending a message..\n");
     char *sendBuff = (char *)data;
     ssize_t nbytes = SSL_write(ssl, sendBuff, data_len);
     if (!nbytes)
-        printf("error sending.\n");
-//    printf("bytes sent: %ld\n", nbytes);
+        errv("error sending.\n");
 }
 
 void client_ch_listen(callback_msg_rcv_t cb_msg_rcv)
@@ -131,9 +130,9 @@ void client_ch_listen(callback_msg_rcv_t cb_msg_rcv)
     }
 
     if (nbytes<0)
-        printf("read error\n");
+        errv("read error\n");
     if(!res)
-        printf("bullshit detected\n");
+        errv("bullshit detected\n");
 }
 
 void client_ch_destroy()
@@ -141,5 +140,5 @@ void client_ch_destroy()
     close(sockfd);
     SSL_CTX_free(ctx);
 
-    printf("destroy!?\n");
+    printf("destroy..\n");
 }

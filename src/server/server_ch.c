@@ -201,14 +201,14 @@ void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
                         else
                             perror("recv");
 
+                        server_ch_user_disconnected(i, cb_cl_dc);
+
                         FD_CLR(i, &master); // remove from master set
                         SSL_free(ssl);
                         close(i);
-
-                        server_ch_user_disconnected(i, cb_cl_dc);
                     }
                     else {
-                        printf("bytes received: %ld\n", nbytes);
+                        debugv("bytes received: %ld\n", nbytes);
                         res = bp_process_data(data_buffer, nbytes,
                                 rest_buffer, &rest_buffer_len,
                                 gdsl_rbtree_search(clients, &compare_user_fd_directly, &i),
@@ -301,7 +301,8 @@ static void server_ch_user_connected(int fd, SSL *ssl, callback_cl_cntd_t cb_cl_
 
 static void server_ch_user_disconnected(int fd, callback_cl_dc cb_cl_dc)
 {
-    struct server_client *sc = gdsl_rbtree_search(clients, &compare_user_fd_directly, &fd);
+    struct server_client *sc = gdsl_rbtree_search(clients,
+           &compare_user_fd_directly, &fd);
     cb_cl_dc(sc);
     if (sc != NULL)
     {

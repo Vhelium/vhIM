@@ -6,7 +6,7 @@
 #include "byteprocessor.h"
 #include "byteconverter.h"
 
-#define LOG 1
+#define LOG 0
 
 int bp_process_data(byte *data, ssize_t data_len, byte *rest_buffer,
         size_t *rest_buffer_len, void *sender, callback_msg_rcv_t cb_msg_rcv)
@@ -14,7 +14,7 @@ int bp_process_data(byte *data, ssize_t data_len, byte *rest_buffer,
     bool go = false;
 
     if (LOG) {
-        printf("bp: data=");
+        debugv("bp: data=");
         int i;
         for(i=0; i<data_len; ++i)
             printf("%02X ", (int)(data)[i]);
@@ -40,11 +40,9 @@ int bp_process_data(byte *data, ssize_t data_len, byte *rest_buffer,
         if (packet_size < 0)
         {
             // bullshit detected
-            printf("bp: negative packet size: %d\n", packet_size);
+            errv("bp: negative packet size: %d\n", packet_size);
             return 0;
         }
-
-//        printf("packet size: %d\n", packet_size);
 
         if (packet_size < total_data_len) // 'read too much'
         {

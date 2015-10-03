@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 
+#include "../constants.h"
 #include "client_ch.h"
 #include "../network/messagetypes.h"
 #include "../network/datapacket.h"
@@ -27,7 +28,7 @@ static void process_packet(void *sender, byte *data)
         case MSG_WELCOME:
         {
             char *msg = datapacket_get_string(dp);
-            printf("Server welcomed you.: %s\n", msg);
+            printf("[INFO]: Server welcomes you: %s\n", msg);
 
             datapacket *answer = datapacket_create(MSG_BROADCAST);
             datapacket_set_string(answer, "Hi all. I'm Auth'ed :)");
@@ -41,7 +42,7 @@ static void process_packet(void *sender, byte *data)
         case MSG_AUTH_FAILED:
         {
             char *msg = datapacket_get_string(dp);
-            printf("Server welcomed you.: %s\n", msg);
+            printf("[INFO]: Server declines you: %s\n", msg);
 
             datapacket *answer = datapacket_create(MSG_BROADCAST);
             datapacket_set_string(answer, "Hi all. I am a failure :/");
@@ -63,7 +64,7 @@ static void process_packet(void *sender, byte *data)
         break;
 
         default:
-            printf("Unknown packet: %d\n", packet_type);
+            errv("Unknown packet: %d\n", packet_type);
             break;
     }
 
@@ -81,8 +82,6 @@ void *process_input()
             datapacket *dp = datapacket_create(MSG_BROADCAST);
             datapacket_set_string(dp, inputBuffer);
             int s = datapacket_finish(dp);
-//            printf("\n\nsending packet:\n");
-//            datapacket_dump(dp);
 
             client_ch_send(dp->data, s);
         }
@@ -102,7 +101,8 @@ int main(int argc, char *argv[])
     if (argc >= 2)
         host = argv[1];
 
-    client_ch_start(host, PORT);
+    if (client_ch_start(host, PORT))
+        exit(1);
 
     datapacket *answer = datapacket_create(MSG_LOGIN);
     datapacket_set_string(answer, nBuf);
@@ -112,11 +112,11 @@ int main(int argc, char *argv[])
     pthread_t input_thread;
     if (pthread_create(&input_thread, NULL, process_input, NULL))
     {
-        printf("Error creating thread\n");
+        errv("Error creating thread\n");
         return 2;
     }
     else
-        printf("input thread started.\n\n");
+        errv("input thread started.\n\n");
 
     client_ch_listen(&process_packet);
 
@@ -142,4 +142,3 @@ static int read_line(char str[], int n)
     str[i] = '\0';
     return i;
 }
-

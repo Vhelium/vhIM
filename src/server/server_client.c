@@ -14,7 +14,6 @@ struct server_client *server_client_create(int id, SSL *ssl)
 
 int sc_fd(struct server_client *sc)
 {
-    printf("sc_fd(): %p resulting in %d\n\n", sc->ssl, SSL_get_fd(sc->ssl));
     return SSL_get_fd(sc->ssl);
 }
 
