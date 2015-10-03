@@ -18,16 +18,6 @@ static int fdmax;          // maximum file descriptor number
 
 static int listener;       // listening socket descriptor
 
-static void *get_in_addr(struct sockaddr *sa)
-{
-    if(sa->sa_family == AF_INET)
-    {
-        return &(((struct sockaddr_in*)sa)->sin_addr);
-    }
-
-    return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
-
 int server_ch_start(char *port)
 {
     int rv;
@@ -129,8 +119,6 @@ void server_ch_listen(void (*cb_cl_cntd)(int fd),
     struct sockaddr_storage remoteaddr; //client address
     socklen_t addrlen;
 
-//    char remoteIP[INET6_ADDRSTRLEN];
-
     int i;
 
     // main loop
@@ -163,11 +151,6 @@ void server_ch_listen(void (*cb_cl_cntd)(int fd),
 
                         // inform server
                         cb_cl_cntd(newfd);
-
-//                        printf("selectserver: new connection from %s on socket %d\n",
-//                                inet_ntop(remoteaddr.ss_family,
-//                                    get_in_addr((struct sockaddr*)&remoteaddr),
-//                                    remoteIP, INET6_ADDRSTRLEN), newfd);
                     }
                 }
                 else
@@ -194,19 +177,6 @@ void server_ch_listen(void (*cb_cl_cntd)(int fd),
 
                         if (!res)
                             perror("processing data");
-
-//                        // we got some data from a client
-//                        for(j=0; j <= fdmax; ++j)
-//                        {
-//                            // send it to everyone, yayy
-//                            if (FD_ISSET(j, &master))
-//                            {
-//                                // except the listener (and ourselves)
-//                                if (j != listener && j != i)
-//                                    if (send(j, data_buffer, nbytes, 0) == -1)
-//                                        perror("send");
-//                            }
-//                        }
                     }
                 }
             }
