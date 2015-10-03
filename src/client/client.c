@@ -18,7 +18,7 @@
 
 static int read_line(char str[], int n);
 
-static void process_packet(int fd, byte *data)
+static void process_packet(void *sender, byte *data)
 {
     datapacket *dp = datapacket_create_from_data(data);
     int packet_type = datapacket_get_int(dp);

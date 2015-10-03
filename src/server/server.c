@@ -21,13 +21,12 @@
 static gdsl_rbtree_t users;
 
 // Callback Functions
-static void cb_cl_cntd(int fd);
-static void cb_msg_rcv(int fd, byte *data);
-static void cb_cl_dc(int fd);
+static void cb_cl_cntd(struct server_client *sc);
+static void cb_msg_rcv(void *sc, byte *data);
+static void cb_cl_dc(struct server_client *sc);
 
 // User Data Structure Interface
 static int add_server_user(struct server_user *su);
-static struct server_user *get_user_by_fd(int fd);
 static struct server_user *get_user_by_id(int id);
 static void remove_server_user(int id);
 
@@ -106,7 +105,8 @@ static void handle_packet_unauth(int fd, datapacket *dp)
 
             struct server_user *user;
             if ((user = authorize_user(fd, uname, NULL))) {
-                int r = add_server_user(user);
+                add_server_user(user);
+                //TODO: check if already logged in
 
                 datapacket *answer = datapacket_create(MSG_WELCOME);
                 datapacket_set_string(answer, uname);
@@ -129,17 +129,21 @@ static void handle_packet_unauth(int fd, datapacket *dp)
     }
 }
 
-static void process_packet(int fd, byte *data)
+static void process_packet(struct server_client *sc, byte *data)
 {
     datapacket *dp = datapacket_create_from_data(data);
 
-    struct server_user *user = get_user_by_fd(fd);
-
-    if (user) {
-        handle_packet_auth(user, dp);
+    if (sc->id > 0) {
+        struct server_user *user = get_user_by_id(sc->id);
+        if (user) {
+            handle_packet_auth(user, dp);
+        }
+        else {
+            perror("pp: auth'ed client not in users list");
+        }
     }
     else {
-        handle_packet_unauth(fd, dp);
+        handle_packet_unauth(sc->fd, dp);
     }
 
     datapacket_destroy(dp); // destroy the dp with its data array
@@ -148,36 +152,46 @@ static void process_packet(int fd, byte *data)
 /*
  * Callback Functions
  */
-static void cb_cl_cntd(int fd)
+static void cb_cl_cntd(struct server_client *sc)
 {
-    printf("Client connected with file descriptor #%d\n", fd);
+    printf("Client connected with file descriptor #%d\n", sc->fd);
 }
 
-static void cb_msg_rcv(int fd, byte *data)
+static void cb_msg_rcv(void *sc, byte *data)
 {
-    printf("Message received from client with fd #%d\n", fd);
-    process_packet(fd, data);
+    printf("Message received from client with fd #%d\n",
+            ((struct server_client *)sc)->fd);
+    process_packet(((struct server_client *)sc), data);
 }
 
-static void cb_cl_dc(int fd)
+static void cb_cl_dc(struct server_client *sc)
 {
-    printf("Client disconnected with file descriptor #%d\n", fd);
-    struct server_user *user = get_user_by_fd(fd);
-    if (user)
-        remove_server_user(user->id);
+    printf("Client disconnected with fd %d\n", sc->fd);
+    if (sc->id > 0) {
+        struct server_user *user = get_user_by_id(sc->id);
+        if (user) {
+            remove_server_user(user->id);
+        }
+        else {
+            perror("dc: auth'ed client not in users list");
+        }
+    }
 }
 
 /*
  * User Management
  */
-
 static struct server_user *authorize_user(int fd, char *username, char* pwd)
 {
     struct server_user *user = NULL;
     if (true) {
         user = server_user_create(fd, fd, username);
     }
-    //TODO
+    //TODO: authentification
+    
+    // inform server_ch about the user's ID
+    server_ch_user_authed(fd, user->id);
+
     return user;
 }
 
@@ -233,16 +247,16 @@ static int add_server_user(struct server_user *su)
     return rc;
 }
 
-static int map_user_by_fd(const gdsl_element_t e, gdsl_location_t l, void *userdata)
-{
-    int fd = *((int *)userdata);
-    return ((struct server_user *)e)->fd == fd ? GDSL_MAP_STOP : GDSL_MAP_CONT;
-}
-
-static struct server_user *get_user_by_fd(int fd)
-{
-    return gdsl_rbtree_map_infix(users, &map_user_by_fd, &fd);
-}
+//static int map_user_by_fd(const gdsl_element_t e, gdsl_location_t l, void *userdata)
+//{
+//    int fd = *((int *)userdata);
+//    return ((struct server_user *)e)->fd == fd ? GDSL_MAP_STOP : GDSL_MAP_CONT;
+//}
+//
+//static struct server_user *get_user_by_fd(int fd)
+//{
+//    return gdsl_rbtree_map_infix(users, &map_user_by_fd, &fd);
+//}
 
 static struct server_user *get_user_by_id(int id)
 {

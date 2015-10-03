@@ -8,6 +8,15 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include "gdsl_types.h"
+#include "gdsl_rbtree.h"
+
+#include "openssl/ssl.h"
+#include "openssl/err.h"
+
+#include "server_ch.h"
+#include "server_client.h"
+
 #include "../constants.h"
 #include "../network/datapacket.h"
 #include "../network/byteprocessor.h"
@@ -18,11 +27,40 @@ static int fdmax;          // maximum file descriptor number
 
 static int listener;       // listening socket descriptor
 
+static gdsl_rbtree_t clients; // list of all connected clients
+static void server_ch_user_connected(int fd, SSL *ssl, callback_cl_cntd_t cb_cl_cntd);
+static void server_ch_user_disconnected(int fd, callback_cl_dc cb_cl_dc);
+
+static SSL_CTX *ctx;
+
+static SSL_CTX *init_server_ctx(void);
+static void load_certificates(SSL_CTX* ctx, char* CertFile, char* KeyFile);
+static void show_certs(SSL *ssl);
+
+// compare [server_client] with [server_client]
+static long int compare_user_fd(const gdsl_element_t E, void *VALUE)
+{
+    return ((struct server_client *)E)->fd - ((struct server_client *)VALUE)->fd;
+}
+
+// compare [server_client] with [fd]
+static long int compare_user_fd_directly(const gdsl_element_t E, void *VALUE)
+{
+    return ((struct server_client *)E)->fd - *((int *)VALUE);
+}
+
 int server_ch_start(char *port)
 {
-    int rv;
+    // init datastructures
+    clients = gdsl_rbtree_alloc("CLIENTS", NULL, NULL, &compare_user_fd);
 
-    int yes=1;          // for setsockopt()
+    // initialize SSL
+    SSL_library_init();
+    ctx = init_server_ctx();
+    load_certificates(ctx, "cert.pem", "cert.pem");
+
+    // set up TCP socket
+    int rv, yes=1;      // for setsockopt()
     struct addrinfo hints, *ai, *p;
 
     FD_ZERO(&master);   // clear master and temp sets
@@ -105,12 +143,12 @@ void server_ch_send_all(int fd_from, byte *data, size_t data_len)
     }
 }
 
-void server_ch_listen(void (*cb_cl_cntd)(int fd),
-        void (*cb_msg_rcv)(int fd, byte *data),
-        void (*cb_cl_dc)(int fd))
+void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
+        callback_msg_rcv_t cb_msg_rcv,
+        callback_cl_dc cb_cl_dc)
 {
     byte data_buffer[1024] = {0};
-    size_t nbytes = 0; 
+    ssize_t nbytes = 0; 
     byte rest_buffer[1024] = {0};
     size_t rest_buffer_len = 0;
     int res = 1;
@@ -125,42 +163,46 @@ void server_ch_listen(void (*cb_cl_cntd)(int fd),
     for(;;)
     {
         read_fds = master;  // copy it
-        if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1)
-        {
+        if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
             perror("select");
             exit(4);
         }
 
         // run through existing connections looking for data to read
         for(i = 0; i <= fdmax; ++i)
-            if(FD_ISSET(i, &read_fds)) // found sth
-            {
-                if (i == listener)
-                {
+            if(FD_ISSET(i, &read_fds)) { // found sth
+                if (i == listener) {
                     // handle new connections
                     addrlen = sizeof(remoteaddr);
                     newfd = accept(listener, (struct sockaddr *)&remoteaddr, &addrlen);
 
                     if (newfd == -1)
                         perror("accept");
-                    else
-                    {
+                    else {
                         FD_SET(newfd, &master); // add to master set
                         if (newfd > fdmax)      // keep track of max
                             fdmax = newfd;
 
-                        // inform server
-                        cb_cl_cntd(newfd);
+                        // handle new connection
+                        SSL *ssl = SSL_new(ctx);
+                        SSL_set_fd(ssl, newfd);
+
+                        if (SSL_accept(ssl) == -1) {
+                            ERR_print_errors_fp(stderr);
+
+                            close(i);
+                            FD_CLR(newfd, &master);
+                        }
+                        else {
+                            server_ch_user_connected(newfd, ssl, cb_cl_cntd);
+                        }
                     }
                 }
-                else
-                {
+                else {
                     // handle data from a client
-                    if ((nbytes = recv(i, data_buffer, sizeof(data_buffer), 0)) <= 0)
-                    {
+                    if ((nbytes = recv(i, data_buffer, sizeof(data_buffer), 0)) <= 0) {
                         // got error or connection closed by client
-                        if (nbytes == 0)
-                        {
+                        if (nbytes == 0) {
                             // connection closed
                             printf("selectserver: socket %d hung up\n", i);
                         }
@@ -168,12 +210,14 @@ void server_ch_listen(void (*cb_cl_cntd)(int fd),
                             perror("recv");
                         close(i);
                         FD_CLR(i, &master); // remove from master set
+                        server_ch_user_disconnected(i, cb_cl_dc);
                     }
-                    else
-                    {
+                    else {
                         printf("bytes received: %ld\n", nbytes);
                         res = bp_process_data(data_buffer, nbytes,
-                                rest_buffer, &rest_buffer_len, i, cb_msg_rcv);
+                                rest_buffer, &rest_buffer_len,
+                                gdsl_rbtree_search(clients, &compare_user_fd_directly, &i),
+                                cb_msg_rcv);
 
                         if (!res)
                             perror("processing data");
@@ -183,6 +227,94 @@ void server_ch_listen(void (*cb_cl_cntd)(int fd),
     }// end for(;;)
 }
 
+void server_ch_user_authed(int id, int fd)
+{
+    struct server_client *sc = gdsl_rbtree_search(clients,
+            &compare_user_fd_directly, &fd);
+    if (sc != NULL)
+        sc->id = id;
+}
+
+static SSL_CTX *init_server_ctx(void)
+{
+    const SSL_METHOD *method;
+    SSL_CTX *ctx;
+
+    OpenSSL_add_all_algorithms();       /* load & register all cryptos, etc. */
+    SSL_load_error_strings();           /* load all error messages */
+    method = SSLv3_server_method();     /* create new server-method instance */
+    ctx = SSL_CTX_new(method);          /* create new context from method */
+    if ( ctx == NULL )
+    {
+        ERR_print_errors_fp(stderr);
+        abort();
+    }
+    return ctx;
+}
+
+static void load_certificates(SSL_CTX* ctx, char* CertFile, char* KeyFile)
+{
+    /* set the local certificate from CertFile */
+    if ( SSL_CTX_use_certificate_file(ctx, CertFile, SSL_FILETYPE_PEM) <= 0 )
+    {
+        ERR_print_errors_fp(stderr);
+        abort();
+    }
+    /* set the private key from KeyFile (may be the same as CertFile) */
+    if ( SSL_CTX_use_PrivateKey_file(ctx, KeyFile, SSL_FILETYPE_PEM) <= 0 )
+    {
+        ERR_print_errors_fp(stderr);
+        abort();
+    }
+    /* verify private key */
+    if ( !SSL_CTX_check_private_key(ctx) )
+    {
+        fprintf(stderr, "Private key does not match the public certificate\n");
+        abort();
+    }
+}
+
+static void show_certs(SSL *ssl)
+{
+    X509 *cert;
+    char *line;
+
+    cert = SSL_get_peer_certificate(ssl);   /* Get certificates (if available) */
+    if ( cert != NULL )
+    {
+        printf("Server certificates:\n");
+        line = X509_NAME_oneline(X509_get_subject_name(cert), 0, 0);
+        printf("Subject: %s\n", line);
+        free(line);
+        line = X509_NAME_oneline(X509_get_issuer_name(cert), 0, 0);
+        printf("Issuer: %s\n", line);
+        free(line);
+        X509_free(cert);
+    }
+    else
+        printf("No certificates.\n");
+}
+
+static void server_ch_user_connected(int fd, SSL *ssl, callback_cl_cntd_t cb_cl_cntd)
+{
+    int rc;
+    struct server_client *sc = server_client_create(-1, fd, ssl);
+    gdsl_rbtree_insert(clients, (void *)sc, &rc);
+    cb_cl_cntd(sc);
+}
+
+static void server_ch_user_disconnected(int fd, callback_cl_dc cb_cl_dc)
+{
+    struct server_client *sc = gdsl_rbtree_search(clients, &compare_user_fd_directly, &fd);
+    cb_cl_dc(sc);
+    if (sc != NULL)
+    {
+        gdsl_rbtree_remove(clients, sc);
+        server_client_destroy(sc);
+    }
+}
+
 void server_ch_destroy()
 {
+    //TODO: free resources
 }

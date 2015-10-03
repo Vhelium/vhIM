@@ -1,8 +1,8 @@
 CC = clang
-CFLAGS = -Wall -g -pthreads -I/usr/include/gdsl -L/usr/lib -lgdsl
+CFLAGS = -Wall -g -pthreads -I/usr/include/gdsl -L/usr/lib -lgdsl -lssl -lcrypto
 
-SRC_SERVER:=$(filter-out src/test.c, $(shell find src -type f -name *.c | grep -v client))
-SRC_CLIENT:=$(filter-out src/test.c, $(shell find src -type f -name *.c | grep -v server))
+SRC_SERVER:=$(filter-out src/test.c, $(shell find src -type f -name *.c | grep -v client/))
+SRC_CLIENT:=$(filter-out src/test.c, $(shell find src -type f -name *.c | grep -v server/))
 
 server: $(SRC_SERVER)
 	$(CC) $(CFLAGS) -o bin/server $(SRC_SERVER)

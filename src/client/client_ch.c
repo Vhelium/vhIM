@@ -56,7 +56,7 @@ void client_ch_send(byte *data, size_t data_len)
 //    printf("bytes sent: %ld\n", nbytes);
 }
 
-void client_ch_listen(void (*callback)(int fd, byte *data))
+void client_ch_listen(callback_msg_rcv_t cb_msg_rcv)
 {
     byte data_buffer[1024] = {0};
     ssize_t nbytes = 0; 
@@ -69,7 +69,7 @@ void client_ch_listen(void (*callback)(int fd, byte *data))
     while (res && (nbytes = read(sockfd, data_buffer, sizeof(data_buffer)-1)) > 0)
     {
         res = bp_process_data(data_buffer, nbytes,
-                rest_buffer, &rest_buffer_len, sockfd, callback);
+                rest_buffer, &rest_buffer_len, &sockfd, cb_msg_rcv);
     }
 
     if (nbytes<0)
