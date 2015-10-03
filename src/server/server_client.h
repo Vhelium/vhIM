@@ -5,12 +5,13 @@
 
 struct server_client
 {
-    int fd;
     int id;
     SSL *ssl;
 };
 
-struct server_client *server_client_create(int id, int fd, SSL *ssl);
+struct server_client *server_client_create(int id, SSL *ssl);
+
+int sc_fd(struct server_client *sc);
 
 // has to be invoked manually
 void server_client_destroy(struct server_client *sc);

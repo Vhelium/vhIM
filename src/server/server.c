@@ -31,7 +31,7 @@ static struct server_user *get_user_by_id(int id);
 static void remove_server_user(int id);
 
 // User Management
-static struct server_user *authorize_user(int fd, char* username, char* pwd);
+static struct server_user *authorize_user(SSL *ssl, char* username, char* pwd);
 
 // Message Passing
 static int send_to_user(struct server_user *u_to, datapacket *dp);
@@ -75,7 +75,7 @@ static void handle_packet_auth(struct server_user *user, datapacket *dp)
         case MSG_BROADCAST: {
             char *msg = datapacket_get_string(dp);
             char name[64];
-            sprintf(name, "%s(%d)", user->username, user->fd);
+            sprintf(name, "%s(%d)", user->username, user->id);
             printf("Bcst [%s]: %s\n",name, msg);
 
             datapacket *answer = datapacket_create(MSG_BROADCAST);
@@ -94,7 +94,7 @@ static void handle_packet_auth(struct server_user *user, datapacket *dp)
     }
 }
 
-static void handle_packet_unauth(int fd, datapacket *dp)
+static void handle_packet_unauth(SSL *ssl, datapacket *dp)
 {
     int packet_type = datapacket_get_int(dp);
 
@@ -104,20 +104,20 @@ static void handle_packet_unauth(int fd, datapacket *dp)
             printf("Login as: %s", uname);
 
             struct server_user *user;
-            if ((user = authorize_user(fd, uname, NULL))) {
+            if ((user = authorize_user(ssl, uname, NULL))) {
                 add_server_user(user);
                 //TODO: check if already logged in
 
                 datapacket *answer = datapacket_create(MSG_WELCOME);
                 datapacket_set_string(answer, uname);
                 size_t s = datapacket_finish(answer);
-                server_ch_send(fd, answer->data, s);
+                server_ch_send(ssl, answer->data, s);
             }
             else {
                 datapacket *answer = datapacket_create(MSG_AUTH_FAILED);
                 datapacket_set_string(answer, "Authentification failed.");
                 size_t s = datapacket_finish(answer);
-                server_ch_send(fd, answer->data, s);
+                server_ch_send(ssl, answer->data, s);
             }
             free(uname);
         }
@@ -143,7 +143,7 @@ static void process_packet(struct server_client *sc, byte *data)
         }
     }
     else {
-        handle_packet_unauth(sc->fd, dp);
+        handle_packet_unauth(sc->ssl, dp);
     }
 
     datapacket_destroy(dp); // destroy the dp with its data array
@@ -154,19 +154,19 @@ static void process_packet(struct server_client *sc, byte *data)
  */
 static void cb_cl_cntd(struct server_client *sc)
 {
-    printf("Client connected with file descriptor #%d\n", sc->fd);
+    printf("Client connected with file descriptor #%d\n", sc_fd(sc));
 }
 
 static void cb_msg_rcv(void *sc, byte *data)
 {
     printf("Message received from client with fd #%d\n",
-            ((struct server_client *)sc)->fd);
+            sc_fd((struct server_client *)sc));
     process_packet(((struct server_client *)sc), data);
 }
 
 static void cb_cl_dc(struct server_client *sc)
 {
-    printf("Client disconnected with fd %d\n", sc->fd);
+    printf("Client disconnected with fd %d\n", sc_fd(sc));
     if (sc->id > 0) {
         struct server_user *user = get_user_by_id(sc->id);
         if (user) {
@@ -181,16 +181,17 @@ static void cb_cl_dc(struct server_client *sc)
 /*
  * User Management
  */
-static struct server_user *authorize_user(int fd, char *username, char* pwd)
+static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd)
 {
     struct server_user *user = NULL;
     if (true) {
-        user = server_user_create(fd, fd, username);
+        int id = SSL_get_fd(ssl);
+        user = server_user_create(id, ssl, username);
     }
     //TODO: authentification
     
     // inform server_ch about the user's ID
-    server_ch_user_authed(fd, user->id);
+    server_ch_user_authed(user->id, ssl);
 
     return user;
 }
@@ -201,7 +202,7 @@ static struct server_user *authorize_user(int fd, char *username, char* pwd)
 static int send_to_user(struct server_user *u_to, datapacket *dp)
 {
     size_t s = datapacket_finish(dp);
-    server_ch_send(u_to->fd, dp->data, s);
+    server_ch_send(u_to->ssl, dp->data, s);
 
     return 0;
 }
@@ -209,15 +210,18 @@ static int send_to_user(struct server_user *u_to, datapacket *dp)
 static int map_send_to_user(const gdsl_element_t e, gdsl_location_t l, void *ud)
 {
     struct tripplet {
-        int fd_from;
+        SSL *ssl;
         void *data;
         size_t data_len;
     } *d = (struct tripplet *)ud;
 
-    int fd_target = ((struct server_user *)e)->fd;
+    int fd_target = SSL_get_fd(((struct server_user *)e)->ssl);
+    SSL *ssl = ((struct server_user *)e)->ssl;
 
-    if (fd_target != d->fd_from)
-        server_ch_send(fd_target, d->data, d->data_len);
+    int fd_from = SSL_get_fd(d->ssl);
+
+    if (fd_target != fd_from)
+        server_ch_send(ssl, d->data, d->data_len);
 
     return GDSL_MAP_CONT;
 }
@@ -227,10 +231,10 @@ static int send_to_all(struct server_user *u_from, datapacket *dp)
     size_t data_len = datapacket_finish(dp);
 
     struct tripplet {
-        int fd_from;
+        SSL *ssl;
         void *data;
         size_t data_len;
-    } dp_data = { u_from->fd, dp->data, data_len };
+    } dp_data = { u_from->ssl, dp->data, data_len };
 
     gdsl_rbtree_map_infix(users, &map_send_to_user, &dp_data);
 

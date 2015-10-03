@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "openssl/ssl.h"
+#include "openssl/err.h"
+
 #include "client_ch.h"
 #include "../network/datapacket.h"
 #include "../constants.h"
@@ -15,8 +18,51 @@ static int sockfd = 0;
 static struct sockaddr_in serv_addr;
 static struct hostent *server;
 
+SSL *ssl;
+SSL_CTX *ctx;
+
+SSL_CTX* init_ctx(void)
+{   
+    const SSL_METHOD *method;
+    SSL_CTX *ctx;
+
+    OpenSSL_add_all_algorithms();       /* Load cryptos, et.al. */
+    SSL_load_error_strings();           /* Bring in and register error messages */
+    method = SSLv2_client_method();     /* Create new client-method instance */
+    ctx = SSL_CTX_new(method);          /* Create new context */
+    if ( ctx == NULL ) {
+        ERR_print_errors_fp(stderr);
+        abort();
+    }
+    return ctx;
+}
+
+void show_certs(SSL* ssl)
+{   
+    X509 *cert;
+    char *line;
+
+    cert = SSL_get_peer_certificate(ssl);   /* get the server's certificate */
+    if ( cert != NULL ) {
+        printf("Server certificates:\n");
+        line = X509_NAME_oneline(X509_get_subject_name(cert), 0, 0);
+        printf("Subject: %s\n", line);
+        free(line);                         /* free the malloc'ed string */
+        line = X509_NAME_oneline(X509_get_issuer_name(cert), 0, 0);
+        printf("Issuer: %s\n", line);
+        free(line);                         /* free the malloc'ed string */
+        X509_free(cert);                    /* free the malloc'ed certificate copy */
+    }
+    else
+        printf("No certificates.\n");
+}
+
 int client_ch_start(char *host, int port)
 {
+    // initialize SSL
+    ctx = init_ctx();
+
+    // set up TCP connection
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         printf("\nError: couldn't create socket, lel\n");
@@ -41,6 +87,15 @@ int client_ch_start(char *host, int port)
     {
         printf("\nError: connection failed \n");
         return 3;
+    }
+
+    ssl = SSL_new(ctx);
+    SSL_set_fd(ssl, sockfd);
+    if (SSL_connect(ssl) == -1) {
+        ERR_print_errors_fp(stderr);
+        close(sockfd);
+        SSL_CTX_free(ctx);
+        return 2;
     }
 
     return 0;
@@ -80,5 +135,8 @@ void client_ch_listen(callback_msg_rcv_t cb_msg_rcv)
 
 void client_ch_destroy()
 {
+    close(sockfd);
+    SSL_CTX_free(ctx);
+
     printf("destroy!?\n");
 }

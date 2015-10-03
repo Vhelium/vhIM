@@ -40,13 +40,18 @@ static void show_certs(SSL *ssl);
 // compare [server_client] with [server_client]
 static long int compare_user_fd(const gdsl_element_t E, void *VALUE)
 {
-    return ((struct server_client *)E)->fd - ((struct server_client *)VALUE)->fd;
+    return sc_fd((struct server_client *)E) - sc_fd((struct server_client *)VALUE);
 }
 
 // compare [server_client] with [fd]
 static long int compare_user_fd_directly(const gdsl_element_t E, void *VALUE)
 {
-    return ((struct server_client *)E)->fd - *((int *)VALUE);
+    return sc_fd((struct server_client *)E) - *((int *)VALUE);
+}
+
+static struct server_client *get_client_by_fd(int fd)
+{
+    return gdsl_rbtree_search(clients, &compare_user_fd_directly, &fd);
 }
 
 int server_ch_start(char *port)
@@ -57,7 +62,7 @@ int server_ch_start(char *port)
     // initialize SSL
     SSL_library_init();
     ctx = init_server_ctx();
-    load_certificates(ctx, "cert.pem", "cert.pem");
+    load_certificates(ctx, "vhIM.crt", "vhIM.key");
 
     // set up TCP socket
     int rv, yes=1;      // for setsockopt()
@@ -121,26 +126,10 @@ int server_ch_start(char *port)
     return 0;
 }
 
-void server_ch_send(int fd, byte *data, size_t data_len)
+void server_ch_send(SSL *ssl, byte *data, size_t data_len)
 {
-    if (send(fd, data, data_len, 0) == -1)
+    if (SSL_write(ssl, data, data_len) == -1)
         perror("send");
-}
-
-void server_ch_send_all(int fd_from, byte *data, size_t data_len)
-{
-    int j;
-    for(j=0; j <= fdmax; ++j)
-    {
-        // send it to everyone, yayy
-        if (FD_ISSET(j, &master))
-        {
-            // except the listener (and ourselves)
-            if (j != listener && j != fd_from)
-                if (send(j, data, data_len, 0) == -1)
-                    perror("send");
-        }
-    }
 }
 
 void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
@@ -190,8 +179,9 @@ void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
                         if (SSL_accept(ssl) == -1) {
                             ERR_print_errors_fp(stderr);
 
-                            close(i);
                             FD_CLR(newfd, &master);
+                            SSL_free(ssl);
+                            close(i);
                         }
                         else {
                             server_ch_user_connected(newfd, ssl, cb_cl_cntd);
@@ -200,7 +190,9 @@ void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
                 }
                 else {
                     // handle data from a client
-                    if ((nbytes = recv(i, data_buffer, sizeof(data_buffer), 0)) <= 0) {
+                    SSL *ssl = get_client_by_fd(i)->ssl;
+                    if ((nbytes = SSL_read(ssl, data_buffer,
+                                    sizeof(data_buffer))) <= 0) {
                         // got error or connection closed by client
                         if (nbytes == 0) {
                             // connection closed
@@ -208,8 +200,11 @@ void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
                         }
                         else
                             perror("recv");
-                        close(i);
+
                         FD_CLR(i, &master); // remove from master set
+                        SSL_free(ssl);
+                        close(i);
+
                         server_ch_user_disconnected(i, cb_cl_dc);
                     }
                     else {
@@ -227,8 +222,9 @@ void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
     }// end for(;;)
 }
 
-void server_ch_user_authed(int id, int fd)
+void server_ch_user_authed(int id, SSL *ssl)
 {
+    int fd = SSL_get_fd(ssl);
     struct server_client *sc = gdsl_rbtree_search(clients,
             &compare_user_fd_directly, &fd);
     if (sc != NULL)
@@ -298,7 +294,7 @@ static void show_certs(SSL *ssl)
 static void server_ch_user_connected(int fd, SSL *ssl, callback_cl_cntd_t cb_cl_cntd)
 {
     int rc;
-    struct server_client *sc = server_client_create(-1, fd, ssl);
+    struct server_client *sc = server_client_create(-1, ssl);
     gdsl_rbtree_insert(clients, (void *)sc, &rc);
     cb_cl_cntd(sc);
 }
