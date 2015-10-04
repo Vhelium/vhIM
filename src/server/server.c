@@ -11,6 +11,7 @@
 #include "gdsl_types.h"
 #include "gdsl_rbtree.h"
 
+#include "../sql/sql_ch.h"
 #include "server_ch.h"
 #include "../network/datapacket.h"
 #include "../network/messagetypes.h"
@@ -31,7 +32,7 @@ static struct server_user *get_user_by_id(int id);
 static void remove_server_user(int id);
 
 // User Management
-static struct server_user *authorize_user(SSL *ssl, char* username, char* pwd);
+static struct server_user *authorize_user(SSL *ssl, char* username, char* pwd, int *res);
 
 // Message Passing
 static int send_to_user(struct server_user *u_to, datapacket *dp);
@@ -56,6 +57,7 @@ static void server_init()
 
 int main(void)
 {
+    sql_ch_init();
     server_init();
 
     server_ch_start(PORT);
@@ -103,30 +105,38 @@ static void handle_packet_unauth(SSL *ssl, datapacket *dp)
     int packet_type = datapacket_get_int(dp);
 
     switch(packet_type) {
-        case MSG_LOGIN: {
+        case MSG_REQ_LOGIN: {
             char *uname = datapacket_get_string(dp);
-            printf("User logging in as: %s\n", uname);
+            char *upw = datapacket_get_string(dp);
+            printf("User %s trying to login.\n", uname);
 
             struct server_user *user;
-            if ((user = authorize_user(ssl, uname, NULL))) {
+            int res;
+            if ((user = authorize_user(ssl, uname, upw, &res))) {
                 add_server_user(user);
                 //TODO: check if already logged in
 
                 datapacket *answer = datapacket_create(MSG_WELCOME);
                 datapacket_set_string(answer, uname);
-                send_to_user(ssl, answer);
+                send_to_user(user, answer);
             }
             else {
                 datapacket *answer = datapacket_create(MSG_AUTH_FAILED);
                 datapacket_set_string(answer, "Authentification failed.");
-                send_to_user(ssl, answer);
+                datapacket_set_int(answer, res);
+
+                size_t s = datapacket_finish(answer);
+                server_ch_send(ssl, answer->data, s);
+
+                datapacket_destroy(answer);
             }
             free(uname);
+            free(upw);
         }
         break;
 
         default:
-            errv("Unknown packet(unauth): %d", packet_type);
+            errv("unauth'ed packet(%d) dropped.", packet_type);
             break;
     }
 }
@@ -185,17 +195,17 @@ static void cb_cl_dc(struct server_client *sc)
  * User Management                                             *
 \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd)
+static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd, int *res)
 {
     struct server_user *user = NULL;
-    if (true) {
+    if ((*res = sql_check_user_auth(username, pwd)) == SQLV_SUCCESS) {
+        //TODO userid
         int id = SSL_get_fd(ssl);
         user = server_user_create(id, ssl, username);
-    }
-    //TODO: authentification
     
-    // inform server_ch about the user's ID
-    server_ch_user_authed(user->id, ssl);
+        // inform server_ch about the user's ID
+        server_ch_user_authed(user->id, ssl);
+    }
 
     return user;
 }

@@ -53,7 +53,8 @@ static void process_packet(void *sender, byte *data)
         case MSG_AUTH_FAILED:
         {
             char *msg = datapacket_get_string(dp);
-            printf("[INFO]: Server declines you: %s\n", msg);
+            int res = datapacket_get_int(dp);
+            printf("[INFO]: %s\nError Code: %d\n", msg, res);
 
             datapacket *answer = datapacket_create(MSG_BROADCAST);
             datapacket_set_string(answer, "Hi all. I am a failure :/");
@@ -103,6 +104,13 @@ int main(int argc, char *argv[])
     int n = 0;
     while (n <= 0)
         n = read_line(nBuf, 126);
+
+    printf("\nEnter password: ");
+    char pBuf[126+1];
+    n = 0;
+    while (n <= 0)
+        n = read_line(pBuf, 126);
+
     printf("\n\n");
 
     char *host = HOST;
@@ -112,8 +120,9 @@ int main(int argc, char *argv[])
     if (client_ch_start(host, PORT))
         exit(1);
 
-    datapacket *answer = datapacket_create(MSG_LOGIN);
+    datapacket *answer = datapacket_create(MSG_REQ_LOGIN);
     datapacket_set_string(answer, nBuf);
+    datapacket_set_string(answer, pBuf);
     send_to_server(answer);
 
     pthread_t input_thread;
@@ -123,7 +132,7 @@ int main(int argc, char *argv[])
         return 2;
     }
     else
-        errv("input thread started.\n\n");
+        debugv("input thread started.\n\n");
 
     client_ch_listen(&process_packet);
 

@@ -93,7 +93,7 @@ int client_ch_start(char *host, int port)
 
     ssl = SSL_new(ctx);
     SSL_set_fd(ssl, sockfd);
-    show_certs(ssl);
+    //show_certs(ssl);
     if (SSL_connect(ssl) == -1) {
         errv("couldn't connect to server:\n");
         ERR_print_errors_fp(stderr);
