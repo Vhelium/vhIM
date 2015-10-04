@@ -21,29 +21,34 @@
 #include "../network/datapacket.h"
 #include "../network/byteprocessor.h"
 
-static fd_set master;      // master file descriptor list
-static fd_set read_fds;    // temp file descriptor list for select()
-static int fdmax;          // maximum file descriptor number
+/* master file descriptor list */
+static fd_set master;
+/* temp file descriptor list for select() */
+static fd_set read_fds;
+/* maximum file descriptor number */
+static int fdmax;
 
-static int listener;       // listening socket descriptor
+/* listening socket descriptor */
+static int listener;
 
+/* client management */
 static gdsl_rbtree_t clients; // list of all connected clients
 static void server_ch_user_connected(int fd, SSL *ssl, callback_cl_cntd_t cb_cl_cntd);
 static void server_ch_user_disconnected(int fd, callback_cl_dc cb_cl_dc);
 
+/* SSL variables */
 static SSL_CTX *ctx;
-
 static SSL_CTX *init_server_ctx(void);
 static void load_certificates(SSL_CTX* ctx, char* CertFile, char* KeyFile);
 static void show_certs(SSL *ssl);
 
-// compare [server_client] with [server_client]
+/* compare [server_client] with [server_client] */
 static long int compare_user_fd(const gdsl_element_t E, void *VALUE)
 {
     return sc_fd((struct server_client *)E) - sc_fd((struct server_client *)VALUE);
 }
 
-// compare [server_client] with [fd]
+/* compare [server_client] with [fd] */
 static long int compare_user_fd_directly(const gdsl_element_t E, void *VALUE)
 {
     return sc_fd((struct server_client *)E) - *((int *)VALUE);
@@ -179,6 +184,7 @@ void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
                         if (SSL_accept(ssl) == -1) {
                             ERR_print_errors_fp(stderr);
 
+                            // clean up connection
                             FD_CLR(newfd, &master);
                             SSL_free(ssl);
                             close(i);
@@ -203,7 +209,8 @@ void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
 
                         server_ch_user_disconnected(i, cb_cl_dc);
 
-                        FD_CLR(i, &master); // remove from master set
+                        // clean up connection
+                        FD_CLR(i, &master);
                         SSL_free(ssl);
                         close(i);
                     }
@@ -222,6 +229,9 @@ void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
     }// end for(;;)
 }
 
+/* Gets called when client is authenticated as a user
+ * will update the client's userID
+ */
 void server_ch_user_authed(int id, SSL *ssl)
 {
     int fd = SSL_get_fd(ssl);
@@ -313,5 +323,6 @@ static void server_ch_user_disconnected(int fd, callback_cl_dc cb_cl_dc)
 
 void server_ch_destroy()
 {
+    gdsl_rbtree_free(clients);
     //TODO: free resources
 }

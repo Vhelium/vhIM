@@ -67,6 +67,10 @@ int main(void)
     return 0;
 }
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
+ * Package Handling                                            *
+\* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 static void handle_packet_auth(struct server_user *user, datapacket *dp)
 {
     int packet_type = datapacket_get_int(dp);
@@ -110,14 +114,12 @@ static void handle_packet_unauth(SSL *ssl, datapacket *dp)
 
                 datapacket *answer = datapacket_create(MSG_WELCOME);
                 datapacket_set_string(answer, uname);
-                size_t s = datapacket_finish(answer);
-                server_ch_send(ssl, answer->data, s);
+                send_to_user(ssl, answer);
             }
             else {
                 datapacket *answer = datapacket_create(MSG_AUTH_FAILED);
                 datapacket_set_string(answer, "Authentification failed.");
-                size_t s = datapacket_finish(answer);
-                server_ch_send(ssl, answer->data, s);
+                send_to_user(ssl, answer);
             }
             free(uname);
         }
@@ -149,9 +151,10 @@ static void process_packet(struct server_client *sc, byte *data)
     datapacket_destroy(dp); // destroy the dp with its data array
 }
 
-/*
- * Callback Functions
- */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
+ * Callback Functions                                          *
+\* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 static void cb_cl_cntd(struct server_client *sc)
 {
     printf("Client connected with file descriptor #%d\n", sc_fd(sc));
@@ -178,9 +181,10 @@ static void cb_cl_dc(struct server_client *sc)
     }
 }
 
-/*
- * User Management
- */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
+ * User Management                                             *
+\* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd)
 {
     struct server_user *user = NULL;
@@ -196,13 +200,15 @@ static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd)
     return user;
 }
 
-/*
- * Message Passing
- */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
+ * Message Passing                                             *
+\* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 static int send_to_user(struct server_user *u_to, datapacket *dp)
 {
     size_t s = datapacket_finish(dp);
     server_ch_send(u_to->ssl, dp->data, s);
+    datapacket_destroy(dp);
 
     return 0;
 }
@@ -238,29 +244,21 @@ static int send_to_all(struct server_user *u_from, datapacket *dp)
 
     gdsl_rbtree_map_infix(users, &map_send_to_user, &dp_data);
 
+    datapacket_destroy(dp);
+
     return 0;
 }
 
-/*
- * User Data Structure Interface
- */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
+ * User Data Structure Interface                               *
+\* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 static int add_server_user(struct server_user *su)
 {
     int rc;
     gdsl_rbtree_insert(users, (void *)su, &rc);
     return rc;
 }
-
-//static int map_user_by_fd(const gdsl_element_t e, gdsl_location_t l, void *userdata)
-//{
-//    int fd = *((int *)userdata);
-//    return ((struct server_user *)e)->fd == fd ? GDSL_MAP_STOP : GDSL_MAP_CONT;
-//}
-//
-//static struct server_user *get_user_by_fd(int fd)
-//{
-//    return gdsl_rbtree_map_infix(users, &map_user_by_fd, &fd);
-//}
 
 static struct server_user *get_user_by_id(int id)
 {

@@ -25,6 +25,10 @@ void datapacket_set_string(datapacket *dp, char *s);
 bool datapacket_get_bool(datapacket *dp);
 int datapacket_get_int(datapacket *dp);
 long datapacket_get_long(datapacket *dp);
+
+/* returns a newly allocated string.
+ * Note: remember to free it!
+ */
 char *datapacket_get_string(datapacket *dp);
 
 void datapacket_reset(datapacket *dp);

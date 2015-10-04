@@ -105,6 +105,9 @@ int client_ch_start(char *host, int port)
     return 0;
 }
 
+/* Writes @data_len bytes from @data to the server.
+ * Note: If invoked with a packet, remember to free it afterwards!
+ */
 void client_ch_send(byte *data, size_t data_len)
 {
     char *sendBuff = (char *)data;

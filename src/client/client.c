@@ -19,6 +19,18 @@
 
 static int read_line(char str[], int n);
 
+/* Send datapacket to server
+ * Automatically frees the datapacket afterwards
+ */
+static int send_to_server(datapacket *dp)
+{
+    size_t s = datapacket_finish(dp);
+    client_ch_send(dp->data, s);
+    datapacket_destroy(dp);
+
+    return 0;
+}
+
 static void process_packet(void *sender, byte *data)
 {
     datapacket *dp = datapacket_create_from_data(data);
@@ -32,8 +44,7 @@ static void process_packet(void *sender, byte *data)
 
             datapacket *answer = datapacket_create(MSG_BROADCAST);
             datapacket_set_string(answer, "Hi all. I'm Auth'ed :)");
-            size_t s = datapacket_finish(answer);
-            client_ch_send(answer->data, s);
+            send_to_server(answer);
 
             free(msg);
         }
@@ -46,8 +57,7 @@ static void process_packet(void *sender, byte *data)
 
             datapacket *answer = datapacket_create(MSG_BROADCAST);
             datapacket_set_string(answer, "Hi all. I am a failure :/");
-            size_t s = datapacket_finish(answer);
-            client_ch_send(answer->data, s);
+            send_to_server(answer);
 
             free(msg);
         }
@@ -81,9 +91,7 @@ void *process_input()
         {
             datapacket *dp = datapacket_create(MSG_BROADCAST);
             datapacket_set_string(dp, inputBuffer);
-            int s = datapacket_finish(dp);
-
-            client_ch_send(dp->data, s);
+            send_to_server(dp);
         }
     }
 }
@@ -106,8 +114,7 @@ int main(int argc, char *argv[])
 
     datapacket *answer = datapacket_create(MSG_LOGIN);
     datapacket_set_string(answer, nBuf);
-    size_t s = datapacket_finish(answer);
-    client_ch_send(answer->data, s);
+    send_to_server(answer);
 
     pthread_t input_thread;
     if (pthread_create(&input_thread, NULL, process_input, NULL))
@@ -121,9 +128,6 @@ int main(int argc, char *argv[])
     client_ch_listen(&process_packet);
 
     client_ch_destroy();
-
-    datapacket *dp = datapacket_create(0x01);
-    datapacket_set_string(dp, "DataPacket test.\n");
     
     return 0;
 }
