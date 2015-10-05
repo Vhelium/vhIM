@@ -82,15 +82,72 @@ static void process_packet(void *sender, byte *data)
     datapacket_destroy(dp); // destroy the dp with its data array
 }
 
+static char inputBuffer[1024+1];
+
+/* returns the next word of a string in a newly allocated string.
+ * @in: adress to the input string
+ * @out: adress to the output string
+ * returns: length of the word
+ */
+static int next_word(char **in, char **out)
+{
+    char *s = *in;
+    while (*s == ' ') /* ignore preceeding whitespaces */
+        s++;
+    char *p = s;
+    while (*p != ' ' && *p != '\0')
+        ++p;
+    int len = p - s;
+    *out = malloc(sizeof(char) * (len+1));
+    memcpy(*out, s, len);
+    *(*out+len) = '\0';
+
+    *in = p; // adjust input line to 'delete' the first word
+
+    return len;
+}
+
+static int process_command()
+{
+    char *cmd = inputBuffer + 1;
+    char *type = NULL;
+    next_word(&cmd, &type);
+    printf("command type: %s\n", type);
+
+    if (strcmp(type, "kick") == 0) {
+        char *user = NULL;
+        if (next_word(&cmd, &user)) {
+            printf("command target: [%s]\n", user);
+            //TODO: check if it's a digit
+            int uid = atoi(user);
+            printf("uid: %d\n", uid);
+            datapacket *dp = datapacket_create(MSG_CMD_KICK_ID);
+            datapacket_set_int(dp, uid);
+            send_to_server(dp);
+        }
+        else
+            return 2;
+        free(user);
+    }
+    free(type);
+    return 0;
+}
+
+/* called by a pthread
+ */
 void *process_input()
 {
     for(;;) {
-        char inputBuffer[1024+1];
         int n = read_line(inputBuffer, 1024);
         if (n>0) {
-            datapacket *dp = datapacket_create(MSG_BROADCAST);
-            datapacket_set_string(dp, inputBuffer);
-            send_to_server(dp);
+            if (inputBuffer[0] == '/') {
+                process_command();
+            }
+            else {
+                datapacket *dp = datapacket_create(MSG_BROADCAST);
+                datapacket_set_string(dp, inputBuffer);
+                send_to_server(dp);
+            }
         }
     }
 }

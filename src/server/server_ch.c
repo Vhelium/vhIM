@@ -309,6 +309,17 @@ static void server_ch_user_disconnected(int fd, callback_cl_dc cb_cl_dc)
     }
 }
 
+void server_ch_disconnect_user(SSL *ssl, callback_cl_dc cb_cl_dc)
+{
+    int i = SSL_get_fd(ssl);
+    server_ch_user_disconnected(i, cb_cl_dc);
+
+    // clean up connection
+    FD_CLR(i, &master);
+    SSL_free(ssl);
+    close(i);
+}
+
 void server_ch_destroy()
 {
     gdsl_rbtree_free(clients);

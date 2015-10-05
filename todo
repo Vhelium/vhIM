@@ -1,2 +1,9 @@
 server:
     destroy all server_client and server_user when destroying the rb tree
+    hash password on server
+    password check via random string
+
+
+client:
+    inferface:
+        two panels: input & output

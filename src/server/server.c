@@ -95,6 +95,24 @@ static void handle_packet_auth(struct server_user *user, datapacket *dp)
         }
         break;
 
+        case MSG_CMD_KICK_ID: {
+            int tid = datapacket_get_int(dp);
+            printf("received kick request: %d\n", tid);
+            // check if user exists
+            struct server_user *tuser = get_user_by_id(tid);
+            if (tuser) {
+                printf("user (%d) kicks user (%d)\n", user->id, tid);
+                datapacket *answer = datapacket_create(MSG_BROADCAST);
+                datapacket_set_string(answer, "admin");
+                datapacket_set_string(answer, "you got kicked, fggt!");
+
+                send_to_user(tuser, answer);
+
+                server_ch_disconnect_user(tuser->ssl, &cb_cl_dc);
+            }
+        }
+        break;
+
         default:
             errv("Unknown packet(auth): %d", packet_type);
             break;

@@ -6,4 +6,6 @@
 #define MSG_AUTH_FAILED 0x05
 #define MSG_BROADCAST 0x06
 
+#define MSG_CMD_KICK_ID 2001
+
 #endif
