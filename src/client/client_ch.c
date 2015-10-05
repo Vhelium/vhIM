@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "openssl/ssl.h"
-#include "openssl/err.h"
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #include "../constants.h"
 #include "client_ch.h"
