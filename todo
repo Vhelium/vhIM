@@ -1,0 +1,2 @@
+server:
+    destroy all server_client and server_user when destroying the rb tree

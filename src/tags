@@ -9,7 +9,7 @@ BYTEPROCESSOR_H	network/byteprocessor.h	2;"	d
 CLIENT_CH_H	client/client_ch.h	2;"	d
 CONSTANTS_H	constants.h	2;"	d
 DATAPACKET_H	network/datapacket.h	2;"	d
-DEBUG	constants.h	8;"	d
+DEBUG	constants.h	10;"	d
 HOST	client/client.c	18;"	d	file:
 LOG	network/byteprocessor.c	9;"	d	file:
 MESSAGETYPES_H	network/messagetypes.h	2;"	d
@@ -23,14 +23,15 @@ PORT	server/server.c	20;"	d	file:
 SERVER_CH_H	server/server_ch.h	2;"	d
 SERVER_CLIENT_H	server/server_client.h	2;"	d
 SERVER_USER_H	server/server_user.h	2;"	d
-SQLV_CONNECTION_ERROR	sql/sql_ch.c	13;"	d	file:
-SQLV_FAILURE	sql/sql_ch.c	10;"	d	file:
-SQLV_SUCCESS	sql/sql_ch.c	9;"	d	file:
-SQLV_USER_NOT_FOUND	sql/sql_ch.c	11;"	d	file:
-SQLV_WRONG_PASSWORD	sql/sql_ch.c	12;"	d	file:
+SQLV_CONNECTION_ERROR	sql/sql_ch.h	8;"	d
+SQLV_FAILURE	sql/sql_ch.h	5;"	d
+SQLV_SUCCESS	sql/sql_ch.h	4;"	d
+SQLV_USER_NOT_FOUND	sql/sql_ch.h	6;"	d
+SQLV_WRONG_PASSWORD	sql/sql_ch.h	7;"	d
 SQL_CH_H	sql/sql_ch.h	2;"	d
+USER_ID_INVALID	constants.h	6;"	d
 add_server_user	server/server.c	/^static int add_server_user(struct server_user *su)$/;"	f	file:
-authorize_user	server/server.c	/^static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd)$/;"	f	file:
+authorize_user	server/server.c	/^static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd, int *res)$/;"	f	file:
 bc_from_bool	network/byteconverter.c	/^void bc_from_bool(byte *dest, bool data)$/;"	f
 bc_from_int	network/byteconverter.c	/^void bc_from_int(byte *dest, int data)$/;"	f
 bc_to_bool	network/byteconverter.c	/^bool bc_to_bool(byte *data)$/;"	f
@@ -73,8 +74,8 @@ datapacket_set_string	network/datapacket.c	/^void datapacket_set_string(datapack
 datapacket_verify_size	network/datapacket.c	/^static void datapacket_verify_size(datapacket *dp, size_t additional)$/;"	f	file:
 datapacket	network/datapacket.h	/^} datapacket;$/;"	t	typeref:struct:__anon1
 db	sql/sql_ch.c	/^    char db[64];$/;"	m	struct:sql_conection	file:
-debugv	constants.h	10;"	d
-errv	constants.h	14;"	d
+debugv	constants.h	12;"	d
+errv	constants.h	16;"	d
 fdmax	server/server_ch.c	/^static int fdmax;$/;"	v	file:
 get_client_by_fd	server/server_ch.c	/^static struct server_client *get_client_by_fd(int fd)$/;"	f	file:
 get_user_by_id	server/server.c	/^static struct server_user *get_user_by_id(int id)$/;"	f	file:
@@ -124,8 +125,9 @@ server	client/client_ch.c	/^static struct hostent *server;$/;"	v	typeref:struct:
 show_certs	client/client_ch.c	/^void show_certs(SSL* ssl)$/;"	f
 show_certs	server/server_ch.c	/^static void show_certs(SSL *ssl)$/;"	f	file:
 sockfd	client/client_ch.c	/^static int sockfd = 0;$/;"	v	file:
+sql_ch_destroy	sql/sql_ch.c	/^void sql_ch_destroy()$/;"	f
 sql_ch_init	sql/sql_ch.c	/^void sql_ch_init()$/;"	f
-sql_check_user_auth	sql/sql_ch.c	/^int sql_check_user_auth(char *user, char *pw)$/;"	f
+sql_check_user_auth	sql/sql_ch.c	/^int sql_check_user_auth(char *user, char *pw, int *res)$/;"	f
 sql_conection	sql/sql_ch.c	/^struct sql_conection {$/;"	s	file:
 sql_con	sql/sql_ch.c	/^} sql_con;$/;"	v	typeref:struct:sql_conection
 ssl	server/server_client.h	/^    SSL *ssl;$/;"	m	struct:server_client

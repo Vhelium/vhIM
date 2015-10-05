@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+#define USER_ID_INVALID -1
+
 typedef unsigned char byte;
 
 #define DEBUG 0

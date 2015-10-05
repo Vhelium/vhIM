@@ -9,7 +9,7 @@
 
 void sql_ch_init();
 
-int sql_check_user_auth(char *user, char *pw);
+int sql_check_user_auth(char *user, char *pw, int *res);
 
 void sql_ch_destroy();
 

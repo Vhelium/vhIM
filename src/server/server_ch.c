@@ -82,14 +82,12 @@ int server_ch_start(char *port)
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    if((rv = getaddrinfo(NULL, port, &hints, &ai)) != 0)
-    {
+    if((rv = getaddrinfo(NULL, port, &hints, &ai)) != 0) {
         fprintf(stderr, "selectserver: %s\n", gai_strerror(rv));
         exit(1);
     }
 
-    for(p = ai; p != NULL; p = p->ai_next)
-    {
+    for(p = ai; p != NULL; p = p->ai_next) {
         listener = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
         if(listener < 0)
             continue;
@@ -97,8 +95,7 @@ int server_ch_start(char *port)
         // ignore "adress already in use" spam
         setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
 
-        if(bind(listener, p->ai_addr, p->ai_addrlen) < 0)
-        {
+        if(bind(listener, p->ai_addr, p->ai_addrlen) < 0) {
             close(listener);
             continue;
         }
@@ -107,8 +104,7 @@ int server_ch_start(char *port)
     }
 
     // check if socket is bound
-    if(p == NULL)
-    {
+    if(p == NULL) {
         fprintf(stderr, "selectserver: failed to bind\n");
         exit(2);
     }
@@ -116,8 +112,7 @@ int server_ch_start(char *port)
     freeaddrinfo(ai); // no need for it again
 
     // listen
-    if(listen(listener, 10) == -1)
-    {
+    if(listen(listener, 10) == -1) {
         perror("listen");
         exit(3);
     }
@@ -154,8 +149,7 @@ void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
     int i;
 
     // main loop
-    for(;;)
-    {
+    for(;;) {
         read_fds = master;  // copy it
         if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
             perror("select");
@@ -250,8 +244,7 @@ static SSL_CTX *init_server_ctx(void)
     SSL_load_error_strings();           /* load all error messages */
     method = SSLv3_server_method();     /* create new server-method instance */
     ctx = SSL_CTX_new(method);          /* create new context from method */
-    if ( ctx == NULL )
-    {
+    if ( ctx == NULL ) {
         ERR_print_errors_fp(stderr);
         abort();
     }
@@ -261,20 +254,17 @@ static SSL_CTX *init_server_ctx(void)
 static void load_certificates(SSL_CTX* ctx, char* CertFile, char* KeyFile)
 {
     /* set the local certificate from CertFile */
-    if ( SSL_CTX_use_certificate_file(ctx, CertFile, SSL_FILETYPE_PEM) <= 0 )
-    {
+    if ( SSL_CTX_use_certificate_file(ctx, CertFile, SSL_FILETYPE_PEM) <= 0 ) {
         ERR_print_errors_fp(stderr);
         abort();
     }
     /* set the private key from KeyFile (may be the same as CertFile) */
-    if ( SSL_CTX_use_PrivateKey_file(ctx, KeyFile, SSL_FILETYPE_PEM) <= 0 )
-    {
+    if ( SSL_CTX_use_PrivateKey_file(ctx, KeyFile, SSL_FILETYPE_PEM) <= 0 ) {
         ERR_print_errors_fp(stderr);
         abort();
     }
     /* verify private key */
-    if ( !SSL_CTX_check_private_key(ctx) )
-    {
+    if ( !SSL_CTX_check_private_key(ctx) ) {
         fprintf(stderr, "Private key does not match the public certificate\n");
         abort();
     }
@@ -286,8 +276,7 @@ static void show_certs(SSL *ssl)
     char *line;
 
     cert = SSL_get_peer_certificate(ssl);   /* Get certificates (if available) */
-    if ( cert != NULL )
-    {
+    if ( cert != NULL ) {
         printf("Server certificates:\n");
         line = X509_NAME_oneline(X509_get_subject_name(cert), 0, 0);
         printf("Subject: %s\n", line);
@@ -314,8 +303,7 @@ static void server_ch_user_disconnected(int fd, callback_cl_dc cb_cl_dc)
     struct server_client *sc = gdsl_rbtree_search(clients,
            &compare_user_fd_directly, &fd);
     cb_cl_dc(sc);
-    if (sc != NULL)
-    {
+    if (sc != NULL) {
         gdsl_rbtree_remove(clients, sc);
         server_client_destroy(sc);
     }

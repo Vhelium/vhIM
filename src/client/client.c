@@ -84,12 +84,10 @@ static void process_packet(void *sender, byte *data)
 
 void *process_input()
 {
-    for(;;)
-    {
+    for(;;) {
         char inputBuffer[1024+1];
         int n = read_line(inputBuffer, 1024);
-        if (n>0)
-        {
+        if (n>0) {
             datapacket *dp = datapacket_create(MSG_BROADCAST);
             datapacket_set_string(dp, inputBuffer);
             send_to_server(dp);
@@ -126,8 +124,7 @@ int main(int argc, char *argv[])
     send_to_server(answer);
 
     pthread_t input_thread;
-    if (pthread_create(&input_thread, NULL, process_input, NULL))
-    {
+    if (pthread_create(&input_thread, NULL, process_input, NULL)) {
         errv("Error creating thread\n");
         return 2;
     }
@@ -146,8 +143,7 @@ static int read_line(char str[], int n)
     int ch, i = 0;
     while(isspace(ch = getchar()))
                     ;
-    while(ch != '\n' && ch != EOF)
-    {
+    while(ch != '\n' && ch != EOF) {
         if(i < n)
             str[i++] = ch;
         ch = getchar();

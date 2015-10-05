@@ -23,9 +23,8 @@ void sql_ch_init()
     strcpy(sql_con.db, "vhIM");
 }
 
-int sql_check_user_auth(char *user, char *pw)
+int sql_check_user_auth(char *user, char *pw, int *result)
 {
-    int r = SQLV_FAILURE;
     MYSQL *con;
     MYSQL_RES *res;
     MYSQL_ROW row;
@@ -34,7 +33,8 @@ int sql_check_user_auth(char *user, char *pw)
     if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
                 0, NULL, 0)) {
         errv("%s\n", mysql_error(con));
-        return SQLV_CONNECTION_ERROR;
+        *result = SQLV_CONNECTION_ERROR;
+        return USER_ID_INVALID;
     }
 
     //TODO: prevent slq injection via username
@@ -43,28 +43,36 @@ int sql_check_user_auth(char *user, char *pw)
 
     if (mysql_query(con, query)) {
         errv("%s\n", mysql_error(con));
-        return SQLV_CONNECTION_ERROR;
+        *result = SQLV_CONNECTION_ERROR;
+        return USER_ID_INVALID;
     }
 
     res = mysql_use_result(con);
+    int userid = USER_ID_INVALID;
 
     if ((row = mysql_fetch_row(res)) != NULL) {
         char *uid = row[0];
         char *upw = row[1];
 
         if (strcmp(pw, upw)) {
-            r = SQLV_WRONG_PASSWORD;
+            *result = SQLV_WRONG_PASSWORD;
         }
         else {
-            r = SQLV_SUCCESS;
+            *result = SQLV_SUCCESS;
+            userid = strtol(uid, NULL, 10);
         }
     }
     else {
-        r = SQLV_USER_NOT_FOUND;
+        *result = SQLV_USER_NOT_FOUND;
     }
 
     mysql_free_result(res);
     mysql_close(con);
 
-    return r;
+    return userid;
+}
+
+void sql_ch_destroy()
+{
+    // nothing to do
 }

@@ -65,6 +65,7 @@ int main(void)
     server_ch_listen(&cb_cl_cntd, &cb_msg_rcv, &cb_cl_dc);
 
     server_ch_destroy();
+    sql_ch_destroy();
 
     return 0;
 }
@@ -198,10 +199,9 @@ static void cb_cl_dc(struct server_client *sc)
 static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd, int *res)
 {
     struct server_user *user = NULL;
-    if ((*res = sql_check_user_auth(username, pwd)) == SQLV_SUCCESS) {
-        //TODO userid
-        int id = SSL_get_fd(ssl);
-        user = server_user_create(id, ssl, username);
+    int uid = sql_check_user_auth(username, pwd, res);
+    if (*res == SQLV_SUCCESS && uid != USER_ID_INVALID) {
+        user = server_user_create(uid, ssl, username);
     
         // inform server_ch about the user's ID
         server_ch_user_authed(user->id, ssl);
@@ -278,8 +278,7 @@ static struct server_user *get_user_by_id(int id)
 static void remove_server_user(int id)
 {
     struct server_user *su = get_user_by_id(id);
-    if (su != NULL)
-    {
+    if (su != NULL) {
         gdsl_rbtree_remove(users, su);
         server_user_destroy(su);
     }
