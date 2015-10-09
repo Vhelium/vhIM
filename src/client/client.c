@@ -116,7 +116,9 @@ static int execute_command(int type, char *argv[])
     switch (type)
     {
         case MSG_CMD_KICK_ID: {
-            //TODO: check if it's a number
+            /* check if passed argument is a number */
+            if (!is_decimal_number(argv[0]))
+                return 3;
             int uid = atoi(argv[0]);
             printf("uid: %d\n", uid);
             datapacket *dp = datapacket_create(MSG_CMD_KICK_ID);
@@ -126,7 +128,9 @@ static int execute_command(int type, char *argv[])
         break;
 
         case MSG_WHISPER: {
-            //TODO: check if it's a number
+            /* check if passed argument is a number */
+            if (!is_decimal_number(argv[0]))
+                return 3;
             int uid = atoi(argv[0]);
             datapacket *dp = datapacket_create(MSG_WHISPER);
             datapacket_set_int(dp, uid);
@@ -164,6 +168,9 @@ static int execute_command(int type, char *argv[])
         break;
 
         case CMD_CONNECT: {
+            /* check if passed argument is a number */
+            if (argv[1] != NULL && !is_decimal_number(argv[1]))
+                return 3;
             int port = argv[1] != NULL ? atoi(argv[1]) : PORT;
             if (client_connect(argv[0], port)) {
                 printf("error connecting to host\n");
@@ -212,7 +219,6 @@ void *threaded_connect(void *arg)
     else
         set_is_connected_synced(true);
 
-    //TODO: check the flag in the listener loop (thread safe!)
     client_ch_listen(&process_packet);
 
     client_ch_destroy();
@@ -291,11 +297,12 @@ int main(int argc, char *argv[])
 
     process_input();
 
+    /* destroy the connection if it is still active. */
     if (get_is_connected_synced()) {
-        //TODO: destroy connection
+        client_ch_destroy();
     }
     
-    //TODO: destroy mutex
+    pthread_mutex_destroy(&mutex_connected);
     pthread_exit(NULL);
     return 0;
 }

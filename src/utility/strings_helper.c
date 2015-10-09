@@ -6,6 +6,14 @@
 #include "../constants.h"
 #include "strings_helper.h"
 
+bool is_decimal_number(char *in)
+{
+    while(*in)
+        if (isdigit(*in++) == 0)
+            return 0;
+    return 1;
+}
+
 int next_word(char **in, char **out)
 {
     char *s = *in;
