@@ -1,11 +1,19 @@
 #ifndef MESSAGETYPES_H
 #define MESSAGETYPES_H
 
+#define MSG_REQ_REGISTER 0x02
 #define MSG_REQ_LOGIN 0x03
 #define MSG_WELCOME 0x04
 #define MSG_AUTH_FAILED 0x05
 #define MSG_BROADCAST 0x06
+#define MSG_WHISPER 0x07
+#define MSG_REGISTR_SUCCESSFUL 0x08
+#define MSG_REGISTR_FAILED 0x09
+#define MSG_LOGOUT 0xa
+#define MSG_WHO 0xb
 
-#define MSG_CMD_KICK_ID 2001
+#define MSG_CMD_KICK_ID 1001
+
+#define CMD_CONNECT 2001
 
 #endif

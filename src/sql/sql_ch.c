@@ -3,6 +3,8 @@
 #include <mysql.h>
 #include <string.h>
 
+#include <openssl/sha.h>
+
 #include "sql_ch.h"
 #include "../constants.h"
 
@@ -38,8 +40,7 @@ int sql_check_user_auth(char *user, char *pw, int *result)
     }
 
     //TODO: prevent slq injection via username
-    sprintf(query, "SELECT `id`, `password` FROM `users` WHERE `user` = '%s' LIMIT 1",
-            user);
+    sprintf(query, "SELECT `id`, `password`, `salt` FROM `users` WHERE `user` = '%s' LIMIT 1", user);
 
     if (mysql_query(con, query)) {
         errv("%s\n", mysql_error(con));
@@ -52,9 +53,40 @@ int sql_check_user_auth(char *user, char *pw, int *result)
 
     if ((row = mysql_fetch_row(res)) != NULL) {
         char *uid = row[0];
-        char *upw = row[1];
+        char *fetched_pw = row[1];
+        char *salt = row[2];
 
-        if (strcmp(pw, upw)) {
+        if (uid == NULL || fetched_pw == NULL || salt == NULL) {
+            *result = SQLV_CONNECTION_ERROR;
+            goto END;
+        }
+
+        /* prepend salt to entered pw */
+        char *salt_pw = malloc(strlen(salt) + strlen(pw)+1);
+        strcpy(salt_pw, salt);
+        strcat(salt_pw, pw);
+
+        /* hash it */
+        SHA256_CTX context;
+        unsigned char md[SHA256_DIGEST_LENGTH];
+        SHA256_Init(&context);
+        SHA256_Update(&context, (unsigned char*)salt_pw, strlen(salt_pw));
+        SHA256_Final(md, &context);
+
+        /* get hex representation */
+        char hexed_hash[2*SHA256_DIGEST_LENGTH + 1];
+        char *p = hexed_hash;
+        int i;
+        for(i=0; i<sizeof(md); ++i) {
+            sprintf(p, "%0.2X", md[i]);
+            p+=2;
+        }
+        *p = '\0';
+
+        free(salt_pw);
+
+        /* compare hashed input with database entry */
+        if (strcmp(fetched_pw, hexed_hash)) {
             *result = SQLV_WRONG_PASSWORD;
         }
         else {
@@ -66,10 +98,98 @@ int sql_check_user_auth(char *user, char *pw, int *result)
         *result = SQLV_USER_NOT_FOUND;
     }
 
+END:
     mysql_free_result(res);
     mysql_close(con);
 
     return userid;
+}
+
+int sql_ch_add_user(char *user, char *pw)
+{
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    // check if username already exists:
+    
+    sprintf(query, "SELECT EXISTS(SELECT 1 FROM `users` WHERE `user` = '%s')", user);
+    if (mysql_query(con, query)) {
+
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    if ((row = mysql_fetch_row(res)) != NULL) {
+        if (row[0][0] == '1') {
+            result = SQLV_USER_EXISTS;
+            goto QUERY_FAIL;
+        }
+    }
+    else {
+        result = SQLV_USER_EXISTS;
+        goto QUERY_FAIL;
+    }
+
+    mysql_free_result(res);
+
+    if (result == SQLV_SUCCESS) { /* user doesn't exist */
+        //TODO: random salt (doesnt matter if ascii codes or not) */
+        char *salt = "12345678123456781234567812345678";
+        /* prepend salt to entered pw */
+        char *salt_pw = malloc(strlen(salt) + strlen(pw)+1);
+        strcpy(salt_pw, salt);
+        strcat(salt_pw, pw);
+
+        /* hash it */
+        SHA256_CTX context;
+        unsigned char md[SHA256_DIGEST_LENGTH];
+        SHA256_Init(&context);
+        SHA256_Update(&context, (unsigned char*)salt_pw, strlen(salt_pw));
+        SHA256_Final(md, &context);
+        
+        char hexed_hash[2*SHA256_DIGEST_LENGTH + 1];
+        char *p = hexed_hash;
+        int i;
+        for(i=0; i<sizeof(md); ++i) {
+            sprintf(p, "%0.2X", md[i]);
+            p+=2;
+        }
+        *p = '\0';
+
+        free(salt_pw);
+
+        //TODO: prevent slq injection via username
+        sprintf(query, "INSERT INTO `users` VALUES(DEFAULT, '%s', '%s', '%s')", user, hexed_hash, salt);
+
+        if (mysql_query(con, query)) {
+            errv("%s\n", mysql_error(con));
+            result = SQLV_CONNECTION_ERROR;
+            goto END;
+        }
+    }
+   
+    goto END;
+
+QUERY_FAIL:
+    mysql_free_result(res);
+
+END:
+    mysql_close(con);
+
+    return result;
 }
 
 void sql_ch_destroy()

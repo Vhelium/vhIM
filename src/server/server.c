@@ -29,9 +29,13 @@ static void cb_cl_dc(struct server_client *sc);
 // User Data Structure Interface
 static int add_server_user(struct server_user *su);
 static struct server_user *get_user_by_id(int id);
-static void remove_server_user(int id);
+static void remove_server_user_by_id(int id);
+static void remove_server_user_by_struct(struct server_user *su);
+static size_t get_user_count();
+static void write_usernames_to_dp(datapacket *dp);
 
 // User Management
+static bool is_user_logged_in(char *uname);
 static struct server_user *authorize_user(SSL *ssl, char* username, char* pwd, int *res);
 
 // Message Passing
@@ -113,6 +117,49 @@ static void handle_packet_auth(struct server_user *user, datapacket *dp)
         }
         break;
 
+        case MSG_WHISPER: {
+            int tid = datapacket_get_int(dp);
+            struct server_user *tuser = get_user_by_id(tid);
+            if (tuser) {
+                char *msg = datapacket_get_string(dp);
+                char name[64];
+                sprintf(name, "%s(%d)", user->username, user->id);
+                printf("Wsp [%d->%d]: %s\n",user->id, tid, msg);
+
+                datapacket *answer = datapacket_create(MSG_BROADCAST);
+                datapacket_set_string(answer, name);
+                datapacket_set_string(answer, msg);
+
+                send_to_user(tuser, answer);
+
+                free(msg);
+            }
+            else
+                printf("wsp: user not found: %d\n", tid);
+        }
+        break;
+
+        case MSG_WHO: {
+                int ucount = get_user_count();
+                // loop all users
+                // print id and name to buffer
+                // send buffer to user
+                datapacket *answer = datapacket_create(MSG_WHO);
+                datapacket_set_int(answer, ucount);
+
+                write_usernames_to_dp(answer);
+
+                send_to_user(user, answer);
+        }
+        break;
+
+        case MSG_LOGOUT: {
+            printf("user logged out: %s\n", user->username);
+            server_ch_user_authed(-1, user->ssl);
+            remove_server_user_by_struct(user);
+        }
+        break;
+
         default:
             errv("Unknown packet(auth): %d", packet_type);
             break;
@@ -125,15 +172,17 @@ static void handle_packet_unauth(SSL *ssl, datapacket *dp)
 
     switch(packet_type) {
         case MSG_REQ_LOGIN: {
+            /* we know that this client isn't logged in yet as it is unauthed */
             char *uname = datapacket_get_string(dp);
             char *upw = datapacket_get_string(dp);
             printf("User %s trying to login.\n", uname);
 
             struct server_user *user;
             int res;
-            if ((user = authorize_user(ssl, uname, upw, &res))) {
+            bool logged = is_user_logged_in(uname);
+            /* check auth and if someone else already logged in */
+            if ((user = authorize_user(ssl, uname, upw, &res)) && !logged) {
                 add_server_user(user);
-                //TODO: check if already logged in
 
                 datapacket *answer = datapacket_create(MSG_WELCOME);
                 datapacket_set_string(answer, uname);
@@ -141,7 +190,9 @@ static void handle_packet_unauth(SSL *ssl, datapacket *dp)
             }
             else {
                 datapacket *answer = datapacket_create(MSG_AUTH_FAILED);
-                datapacket_set_string(answer, "Authentification failed.");
+                datapacket_set_string(answer, logged ?
+                        "Already logged in on another device." :
+                        "Authentification failed.");
                 datapacket_set_int(answer, res);
 
                 size_t s = datapacket_finish(answer);
@@ -149,6 +200,41 @@ static void handle_packet_unauth(SSL *ssl, datapacket *dp)
 
                 datapacket_destroy(answer);
             }
+            free(uname);
+            free(upw);
+        }
+        break;
+
+        case MSG_REQ_REGISTER: {
+            int res;
+            char *uname = datapacket_get_string(dp);
+            char *upw = datapacket_get_string(dp);
+            printf("User %s wants to register.\n", uname);
+
+            if ((res = sql_ch_add_user(uname, upw)) == SQLV_SUCCESS) {
+                printf("User %s sucessfuly registered.\n", uname);
+                datapacket *answer = datapacket_create(MSG_REGISTR_SUCCESSFUL);
+                datapacket_set_string(answer, "Registration complete. Login now.");
+
+                size_t s = datapacket_finish(answer);
+                server_ch_send(ssl, answer->data, s);
+
+                datapacket_destroy(answer);
+            }
+            else {
+                datapacket *answer = datapacket_create(MSG_REGISTR_FAILED);
+                datapacket_set_string(answer, res == SQLV_USER_EXISTS ?
+                        "Registration failed: user name already exists." :
+                        "Registration failed.");
+
+                size_t s = datapacket_finish(answer);
+                server_ch_send(ssl, answer->data, s);
+
+                datapacket_destroy(answer);
+
+                printf("Failed to register: %d\n", res);
+            }
+
             free(uname);
             free(upw);
         }
@@ -202,7 +288,7 @@ static void cb_cl_dc(struct server_client *sc)
     if (sc->id > 0) {
         struct server_user *user = get_user_by_id(sc->id);
         if (user) {
-            remove_server_user(user->id);
+            remove_server_user_by_struct(user);
         }
         else {
             perror("dc: auth'ed client not in users list");
@@ -213,6 +299,26 @@ static void cb_cl_dc(struct server_client *sc)
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
  * User Management                                             *
 \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+static int map_username(const gdsl_element_t e, gdsl_location_t l, void *ud)
+{
+    struct server_user *user = (struct server_user *)e;
+
+    if (strcmp(user->username, (char *)ud))
+        return GDSL_MAP_CONT;
+    else
+        return GDSL_MAP_STOP;
+}
+
+static bool is_user_logged_in(char *uname)
+{
+    //TODO: MySQL id lookup vs loop all users
+    
+    /* look for user with @uname */
+    struct server_user *u = gdsl_rbtree_map_infix(users, &map_username, uname);
+
+    return u != NULL;
+}
 
 static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd, int *res)
 {
@@ -241,7 +347,7 @@ static int send_to_user(struct server_user *u_to, datapacket *dp)
     return 0;
 }
 
-static int map_send_to_user(const gdsl_element_t e, gdsl_location_t l, void *ud)
+static int map_send_to_all(const gdsl_element_t e, gdsl_location_t l, void *ud)
 {
     struct tripplet {
         SSL *ssl;
@@ -270,7 +376,7 @@ static int send_to_all(struct server_user *u_from, datapacket *dp)
         size_t data_len;
     } dp_data = { u_from->ssl, dp->data, data_len };
 
-    gdsl_rbtree_map_infix(users, &map_send_to_user, &dp_data);
+    gdsl_rbtree_map_infix(users, &map_send_to_all, &dp_data);
 
     datapacket_destroy(dp);
 
@@ -293,11 +399,42 @@ static struct server_user *get_user_by_id(int id)
     return gdsl_rbtree_search(users, &compare_user_id_directly, &id);
 }
 
-static void remove_server_user(int id)
+static void remove_server_user_by_id(int id)
 {
     struct server_user *su = get_user_by_id(id);
     if (su != NULL) {
         gdsl_rbtree_remove(users, su);
         server_user_destroy(su);
     }
+}
+
+static void remove_server_user_by_struct(struct server_user *su)
+{
+    if (su != NULL) {
+        gdsl_rbtree_remove(users, su);
+        server_user_destroy(su);
+    }
+}
+
+static size_t get_user_count()
+{
+    return gdsl_rbtree_get_size(users);
+}
+
+static int map_write_usernames(const gdsl_element_t e, gdsl_location_t l, void *ud)
+{
+    struct server_user *user = (struct server_user *)e;
+    char *ustr = malloc(sizeof(user->username + 64)); /* space for digits */
+    sprintf(ustr, "%s(%d)", user->username, user->id);
+
+    datapacket_set_string((datapacket *)ud, ustr);
+    
+    free(ustr);
+
+    return GDSL_MAP_CONT;
+}
+
+static void write_usernames_to_dp(datapacket *dp)
+{
+    gdsl_rbtree_map_infix(users, &map_write_usernames, dp);
 }

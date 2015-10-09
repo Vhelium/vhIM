@@ -7,18 +7,26 @@
 BYTECONVERTER_H	network/byteconverter.h	2;"	d
 BYTEPROCESSOR_H	network/byteprocessor.h	2;"	d
 CLIENT_CH_H	client/client_ch.h	2;"	d
+CMD_CONNECT	network/messagetypes.h	17;"	d
+COMMAND_PARSER_H	utility/command_parser.h	2;"	d
 CONSTANTS_H	constants.h	2;"	d
 DATAPACKET_H	network/datapacket.h	2;"	d
 DEBUG	constants.h	10;"	d
-HOST	client/client.c	18;"	d	file:
+HOST	client/client.c	21;"	d	file:
 MESSAGETYPES_H	network/messagetypes.h	2;"	d
-MSG_AUTH_FAILED	network/messagetypes.h	6;"	d
-MSG_BROADCAST	network/messagetypes.h	7;"	d
-MSG_CMD_KICK_ID	network/messagetypes.h	9;"	d
-MSG_REQ_LOGIN	network/messagetypes.h	4;"	d
-MSG_WELCOME	network/messagetypes.h	5;"	d
+MSG_AUTH_FAILED	network/messagetypes.h	7;"	d
+MSG_BROADCAST	network/messagetypes.h	8;"	d
+MSG_CMD_KICK_ID	network/messagetypes.h	15;"	d
+MSG_LOGOUT	network/messagetypes.h	12;"	d
+MSG_REGISTR_FAILED	network/messagetypes.h	11;"	d
+MSG_REGISTR_SUCCESSFUL	network/messagetypes.h	10;"	d
+MSG_REQ_LOGIN	network/messagetypes.h	5;"	d
+MSG_REQ_REGISTER	network/messagetypes.h	4;"	d
+MSG_WELCOME	network/messagetypes.h	6;"	d
+MSG_WHISPER	network/messagetypes.h	9;"	d
+MSG_WHO	network/messagetypes.h	13;"	d
 PACKET_SIZE	network/datapacket.h	8;"	d
-PORT	client/client.c	17;"	d	file:
+PORT	client/client.c	20;"	d	file:
 PORT	server/server.c	20;"	d	file:
 SERVER_CH_H	server/server_ch.h	2;"	d
 SERVER_CLIENT_H	server/server_client.h	2;"	d
@@ -26,11 +34,15 @@ SERVER_USER_H	server/server_user.h	2;"	d
 SQLV_CONNECTION_ERROR	sql/sql_ch.h	8;"	d
 SQLV_FAILURE	sql/sql_ch.h	5;"	d
 SQLV_SUCCESS	sql/sql_ch.h	4;"	d
+SQLV_USER_EXISTS	sql/sql_ch.h	9;"	d
 SQLV_USER_NOT_FOUND	sql/sql_ch.h	6;"	d
 SQLV_WRONG_PASSWORD	sql/sql_ch.h	7;"	d
 SQL_CH_H	sql/sql_ch.h	2;"	d
+STRING_HELPER_H	utility/strings_helper.h	2;"	d
 USER_ID_INVALID	constants.h	6;"	d
 add_server_user	server/server.c	/^static int add_server_user(struct server_user *su)$/;"	f	file:
+arg_host	client/client.c	/^static char arg_host[128] = {0};$/;"	v	file:
+arg_port	client/client.c	/^static int arg_port;$/;"	v	file:
 authorize_user	server/server.c	/^static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd, int *res)$/;"	f	file:
 bc_from_bool	network/byteconverter.c	/^void bc_from_bool(byte *dest, bool data)$/;"	f
 bc_from_int	network/byteconverter.c	/^void bc_from_int(byte *dest, int data)$/;"	f
@@ -49,6 +61,7 @@ client_ch_destroy	client/client_ch.c	/^void client_ch_destroy()$/;"	f
 client_ch_listen	client/client_ch.c	/^void client_ch_listen(callback_msg_rcv_t cb_msg_rcv)$/;"	f
 client_ch_send	client/client_ch.c	/^void client_ch_send(byte *data, size_t data_len)$/;"	f
 client_ch_start	client/client_ch.c	/^int client_ch_start(char *host, int port)$/;"	f
+client_connect	client/client.c	/^static int client_connect(char *server, int port)$/;"	f	file:
 clients	server/server_ch.c	/^static gdsl_rbtree_t clients; \/\/ list of all connected clients$/;"	v	file:
 compare_user_fd_directly	server/server_ch.c	/^static long int compare_user_fd_directly(const gdsl_element_t E, void *VALUE)$/;"	f	file:
 compare_user_fd	server/server_ch.c	/^static long int compare_user_fd(const gdsl_element_t E, void *VALUE)$/;"	f	file:
@@ -75,10 +88,13 @@ datapacket_verify_size	network/datapacket.c	/^static void datapacket_verify_size
 datapacket	network/datapacket.h	/^} datapacket;$/;"	t	typeref:struct:__anon1
 db	sql/sql_ch.c	/^    char db[64];$/;"	m	struct:sql_conection	file:
 debugv	constants.h	12;"	d
+disconnect	client/client.c	/^static int disconnect()$/;"	f	file:
 errv	constants.h	16;"	d
+execute_command	client/client.c	/^static int execute_command(int type, char *argv[])$/;"	f	file:
 fdmax	server/server_ch.c	/^static int fdmax;$/;"	v	file:
 get_client_by_fd	server/server_ch.c	/^static struct server_client *get_client_by_fd(int fd)$/;"	f	file:
 get_user_by_id	server/server.c	/^static struct server_user *get_user_by_id(int id)$/;"	f	file:
+get_user_count	server/server.c	/^static size_t get_user_count()$/;"	f	file:
 handle_packet_auth	server/server.c	/^static void handle_packet_auth(struct server_user *user, datapacket *dp)$/;"	f	file:
 handle_packet_unauth	server/server.c	/^static void handle_packet_unauth(SSL *ssl, datapacket *dp)$/;"	f	file:
 id	server/server_client.h	/^    int id;$/;"	m	struct:server_client
@@ -86,31 +102,37 @@ id	server/server_user.h	/^    int id;$/;"	m	struct:server_user
 index	network/datapacket.h	/^    size_t index; \/\/ current index, in bytes$/;"	m	struct:__anon1
 init_ctx	client/client_ch.c	/^SSL_CTX* init_ctx(void)$/;"	f
 init_server_ctx	server/server_ch.c	/^static SSL_CTX *init_server_ctx(void)$/;"	f	file:
-inputBuffer	client/client.c	/^static char inputBuffer[1024+1];$/;"	v	file:
+input_buffer	client/client.c	/^static char input_buffer[1024+1];$/;"	v	file:
+input_thread	client/client.c	/^static pthread_t input_thread;$/;"	v	file:
+is_user_logged_in	server/server.c	/^static bool is_user_logged_in(char *uname)$/;"	f	file:
 listener	server/server_ch.c	/^static int listener;$/;"	v	file:
 load_certificates	server/server_ch.c	/^static void load_certificates(SSL_CTX* ctx, char* CertFile, char* KeyFile)$/;"	f	file:
 main	client/client.c	/^int main(int argc, char *argv[])$/;"	f
 main	server/server.c	/^int main(void)$/;"	f
 main	test.c	/^int main(void)$/;"	f
-map_send_to_user	server/server.c	/^static int map_send_to_user(const gdsl_element_t e, gdsl_location_t l, void *ud)$/;"	f	file:
+map_send_to_all	server/server.c	/^static int map_send_to_all(const gdsl_element_t e, gdsl_location_t l, void *ud)$/;"	f	file:
+map_username	server/server.c	/^static int map_username(const gdsl_element_t e, gdsl_location_t l, void *ud)$/;"	f	file:
+map_write_usernames	server/server.c	/^static int map_write_usernames(const gdsl_element_t e, gdsl_location_t l, void *ud)$/;"	f	file:
 master	server/server_ch.c	/^static fd_set master;$/;"	v	file:
-next_word	client/client.c	/^static int next_word(char **in, char **out)$/;"	f	file:
-process_command	client/client.c	/^static int process_command()$/;"	f	file:
+mutex_connected	client/client.c	/^static pthread_mutex_t mutex_connected;$/;"	v	file:
+next_word	utility/strings_helper.c	/^int next_word(char **in, char **out)$/;"	f
+process_command	utility/command_parser.c	/^int process_command(char *input_buffer, int (*exec_cmd)(int, char**))$/;"	f
 process_input	client/client.c	/^void *process_input()$/;"	f
 process_packet	client/client.c	/^static void process_packet(void *sender, byte *data)$/;"	f	file:
 process_packet	server/server.c	/^static void process_packet(struct server_client *sc, byte *data)$/;"	f	file:
 pw	sql/sql_ch.c	/^    char pw[64];$/;"	m	struct:sql_conection	file:
 query	sql/sql_ch.c	/^static char query[256];$/;"	v	file:
 read_fds	server/server_ch.c	/^static fd_set read_fds;$/;"	v	file:
-read_line	client/client.c	/^static int read_line(char str[], int n)$/;"	f	file:
-remove_server_user	server/server.c	/^static void remove_server_user(int id)$/;"	f	file:
+read_line	utility/strings_helper.c	/^int read_line(char str[], int n)$/;"	f
+remove_server_user_by_id	server/server.c	/^static void remove_server_user_by_id(int id)$/;"	f	file:
+remove_server_user_by_struct	server/server.c	/^static void remove_server_user_by_struct(struct server_user *su)$/;"	f	file:
 sc_fd	server/server_client.c	/^int sc_fd(struct server_client *sc)$/;"	f
 send_to_all	server/server.c	/^static int send_to_all(struct server_user *u_from, datapacket *dp)$/;"	f	file:
 send_to_server	client/client.c	/^static int send_to_server(datapacket *dp)$/;"	f	file:
 send_to_user	server/server.c	/^static int send_to_user(struct server_user *u_to, datapacket *dp)$/;"	f	file:
 serv_addr	client/client_ch.c	/^static struct sockaddr_in serv_addr;$/;"	v	typeref:struct:sockaddr_in	file:
 server_ch_destroy	server/server_ch.c	/^void server_ch_destroy()$/;"	f
-server_ch_disconnect_user	server/server_ch.c	/^void server_ch_disconnect_user(SSL *ssl)$/;"	f
+server_ch_disconnect_user	server/server_ch.c	/^void server_ch_disconnect_user(SSL *ssl, callback_cl_dc cb_cl_dc)$/;"	f
 server_ch_listen	server/server_ch.c	/^void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,$/;"	f
 server_ch_send	server/server_ch.c	/^void server_ch_send(SSL *ssl, byte *data, size_t data_len)$/;"	f
 server_ch_start	server/server_ch.c	/^int server_ch_start(char *port)$/;"	f
@@ -129,6 +151,7 @@ server	client/client_ch.c	/^static struct hostent *server;$/;"	v	typeref:struct:
 show_certs	client/client_ch.c	/^void show_certs(SSL* ssl)$/;"	f
 show_certs	server/server_ch.c	/^static void show_certs(SSL *ssl)$/;"	f	file:
 sockfd	client/client_ch.c	/^static int sockfd = 0;$/;"	v	file:
+sql_ch_add_user	sql/sql_ch.c	/^int sql_ch_add_user(char *user, char *pw)$/;"	f
 sql_ch_destroy	sql/sql_ch.c	/^void sql_ch_destroy()$/;"	f
 sql_ch_init	sql/sql_ch.c	/^void sql_ch_init()$/;"	f
 sql_check_user_auth	sql/sql_ch.c	/^int sql_check_user_auth(char *user, char *pw, int *result)$/;"	f
@@ -138,7 +161,11 @@ ssl	server/server_client.h	/^    SSL *ssl;$/;"	m	struct:server_client
 ssl	server/server_user.h	/^    SSL *ssl;$/;"	m	struct:server_user
 ssl	client/client_ch.c	/^SSL *ssl;$/;"	v
 test_dp	test.c	/^static void test_dp()$/;"	f	file:
+test_ncurses	test.c	/^static void test_ncurses()$/;"	f	file:
+test_salt	test.c	/^static void test_salt()$/;"	f	file:
 test_sql	test.c	/^static void test_sql()$/;"	f	file:
+threaded_connect	client/client.c	/^void *threaded_connect(void *arg)$/;"	f
 user	sql/sql_ch.c	/^    char user[64];$/;"	m	struct:sql_conection	file:
 username	server/server_user.h	/^    char *username;$/;"	m	struct:server_user
 users	server/server.c	/^static gdsl_rbtree_t users;$/;"	v	file:
+write_usernames_to_dp	server/server.c	/^static void write_usernames_to_dp(datapacket *dp)$/;"	f	file:

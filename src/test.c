@@ -1,7 +1,44 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <mysql.h>
+#include <ncurses.h>
 #include "network/datapacket.h"
+#include <openssl/sha.h>
+
+static void test_salt()
+{
+    char *salt = "12345678123456781234567812345678";
+    char *upw = "123456";
+    /* preprend salt to entered */
+    char *salt_pw = malloc(strlen(salt) + strlen(upw) + 1);
+    strcpy(salt_pw, salt);
+    strcat(salt_pw, upw);
+
+    /* hash it */
+    SHA256_CTX context;
+    unsigned char md[SHA256_DIGEST_LENGTH];
+    SHA256_Init(&context);
+    SHA256_Update(&context, (unsigned char*)salt_pw, strlen(salt_pw));
+    SHA256_Final(md, &context);
+
+    printf("hashed pw:\n");
+    int i;
+    for(i=0; i<sizeof(md); ++i)
+        printf("%02X ", (int)(md)[i]);
+    printf("\n\n");
+
+    free(salt_pw);
+}
+
+static void test_ncurses()
+{
+    initscr();
+    printw("yoyooyoyoyoy");
+    refresh();
+    getch();
+    endwin();
+}
 
 static void test_dp()
 {
@@ -77,5 +114,5 @@ static void test_sql()
 
 int main(void)
 {
-    test_sql();
+    test_salt();
 }
