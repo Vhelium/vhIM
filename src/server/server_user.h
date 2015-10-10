@@ -3,17 +3,27 @@
 
 #include "openssl/ssl.h"
 
+struct server_user_connection
+{
+    SSL *ssl;
+    struct server_user_connection *next;
+};
+
 struct server_user
 {
     int id;
-    SSL *ssl;
+    struct server_user_connection *connections;
     char *username;
 };
 
-// new memory will be allocated for username
+/* new memory will be allocated for username and the linked list for connections */
 struct server_user *server_user_create(int id, SSL *ssl, char *username);
 
-// has to be invoked manually
+/* has to be invoked manually */
 void server_user_destroy(struct server_user *su);
+
+void server_user_add_connection(struct server_user *su, SSL *ssl);
+
+void server_user_remove_connection(struct server_user *su, SSL *ssl);
 
 #endif

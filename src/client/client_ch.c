@@ -128,7 +128,6 @@ void client_ch_listen(callback_msg_rcv_t cb_msg_rcv)
 
     while (res && (nbytes = SSL_read(ssl, data_buffer, sizeof(data_buffer))) > 0)
     {
-        printf("reading!");
         res = bp_process_data(data_buffer, nbytes,
                 rest_buffer, &rest_buffer_len, &sockfd, cb_msg_rcv);
     }

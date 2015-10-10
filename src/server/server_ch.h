@@ -3,6 +3,7 @@
 
 #include "openssl/ssl.h"
 #include "server_client.h"
+#include "server_user.h"
 #include "../network/byteprocessor.h"
 #include "../constants.h"
 

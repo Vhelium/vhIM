@@ -67,6 +67,7 @@ compare_user_fd	src/server/server_ch.c	/^static long int compare_user_fd(const g
 compare_user_fd_directly	src/server/server_ch.c	/^static long int compare_user_fd_directly(const gdsl_element_t E, void *VALUE)$/;"	f	file:
 compare_user_id	src/server/server.c	/^static long int compare_user_id(const gdsl_element_t E, void *VALUE)$/;"	f	file:
 compare_user_id_directly	src/server/server.c	/^static long int compare_user_id_directly(const gdsl_element_t E, void *VALUE)$/;"	f	file:
+connections	src/server/server_user.h	/^    struct server_user_connection *connections;$/;"	m	struct:server_user	typeref:struct:server_user::server_user_connection
 ctx	src/client/client_ch.c	/^SSL_CTX *ctx;$/;"	v
 ctx	src/server/server_ch.c	/^static SSL_CTX *ctx;$/;"	v	file:
 data	src/network/datapacket.h	/^    byte *data;$/;"	m	struct:__anon1
@@ -92,6 +93,7 @@ errv	src/constants.h	16;"	d
 execute_command	src/client/client.c	/^static int execute_command(int type, char *argv[])$/;"	f	file:
 fdmax	src/server/server_ch.c	/^static int fdmax;$/;"	v	file:
 get_client_by_fd	src/server/server_ch.c	/^static struct server_client *get_client_by_fd(int fd)$/;"	f	file:
+get_is_connected_synced	src/client/client.c	/^static bool get_is_connected_synced()$/;"	f	file:
 get_user_by_id	src/server/server.c	/^static struct server_user *get_user_by_id(int id)$/;"	f	file:
 get_user_count	src/server/server.c	/^static size_t get_user_count()$/;"	f	file:
 handle_packet_auth	src/server/server.c	/^static void handle_packet_auth(struct server_user *user, datapacket *dp)$/;"	f	file:
@@ -104,6 +106,7 @@ init_server_ctx	src/server/server_ch.c	/^static SSL_CTX *init_server_ctx(void)$/
 input_buffer	src/client/client.c	/^static char input_buffer[1024+1];$/;"	v	file:
 input_thread	src/client/client.c	/^static pthread_t input_thread;$/;"	v	file:
 is_connected	src/client/client.c	/^static bool is_connected = false;$/;"	v	file:
+is_decimal_number	src/utility/strings_helper.c	/^bool is_decimal_number(char *in)$/;"	f
 is_user_logged_in	src/server/server.c	/^static bool is_user_logged_in(char *uname)$/;"	f	file:
 listener	src/server/server_ch.c	/^static int listener;$/;"	v	file:
 load_certificates	src/server/server_ch.c	/^static void load_certificates(SSL_CTX* ctx, char* CertFile, char* KeyFile)$/;"	f	file:
@@ -115,6 +118,7 @@ map_username	src/server/server.c	/^static int map_username(const gdsl_element_t 
 map_write_usernames	src/server/server.c	/^static int map_write_usernames(const gdsl_element_t e, gdsl_location_t l, void *ud)$/;"	f	file:
 master	src/server/server_ch.c	/^static fd_set master;$/;"	v	file:
 mutex_connected	src/client/client.c	/^static pthread_mutex_t mutex_connected;$/;"	v	file:
+next	src/server/server_user.h	/^    struct server_user_connection *next;$/;"	m	struct:server_user_connection	typeref:struct:server_user_connection::server_user_connection
 next_word	src/utility/strings_helper.c	/^int next_word(char **in, char **out)$/;"	f
 process_command	src/utility/command_parser.c	/^int process_command(char *input_buffer, int (*exec_cmd)(int, char**))$/;"	f
 process_input	src/client/client.c	/^void *process_input()$/;"	f
@@ -146,8 +150,12 @@ server_client_create	src/server/server_client.c	/^struct server_client *server_c
 server_client_destroy	src/server/server_client.c	/^void server_client_destroy(struct server_client *sc)$/;"	f
 server_init	src/server/server.c	/^static void server_init()$/;"	f	file:
 server_user	src/server/server_user.h	/^struct server_user$/;"	s
+server_user_add_connection	src/server/server_user.c	/^void server_user_add_connection(struct server_user *su, SSL *ssl)$/;"	f
+server_user_connection	src/server/server_user.h	/^struct server_user_connection$/;"	s
 server_user_create	src/server/server_user.c	/^struct server_user *server_user_create(int id, SSL *ssl, char *username)$/;"	f
 server_user_destroy	src/server/server_user.c	/^void server_user_destroy(struct server_user *su)$/;"	f
+server_user_remove_connection	src/server/server_user.c	/^void server_user_remove_connection(struct server_user *su, SSL *ssl)$/;"	f
+set_is_connected_synced	src/client/client.c	/^static void set_is_connected_synced(bool b)$/;"	f	file:
 show_certs	src/client/client_ch.c	/^void show_certs(SSL* ssl)$/;"	f
 show_certs	src/server/server_ch.c	/^static void show_certs(SSL *ssl)$/;"	f	file:
 sockfd	src/client/client_ch.c	/^static int sockfd = 0;$/;"	v	file:
@@ -159,7 +167,7 @@ sql_con	src/sql/sql_ch.c	/^} sql_con;$/;"	v	typeref:struct:sql_conection
 sql_conection	src/sql/sql_ch.c	/^struct sql_conection {$/;"	s	file:
 ssl	src/client/client_ch.c	/^SSL *ssl;$/;"	v
 ssl	src/server/server_client.h	/^    SSL *ssl;$/;"	m	struct:server_client
-ssl	src/server/server_user.h	/^    SSL *ssl;$/;"	m	struct:server_user
+ssl	src/server/server_user.h	/^    SSL *ssl;$/;"	m	struct:server_user_connection
 test_dp	src/test.c	/^static void test_dp()$/;"	f	file:
 test_ncurses	src/test.c	/^static void test_ncurses()$/;"	f	file:
 test_salt	src/test.c	/^static void test_salt()$/;"	f	file:

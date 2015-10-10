@@ -39,8 +39,9 @@ static bool is_user_logged_in(char *uname);
 static struct server_user *authorize_user(SSL *ssl, char* username, char* pwd, int *res);
 
 // Message Passing
+static int send_to_client(SSL *ssl, datapacket *dp);
 static int send_to_user(struct server_user *u_to, datapacket *dp);
-static int send_to_all(struct server_user *u_from, datapacket *dp);
+static int send_to_all(SSL *ssl_from, datapacket *dp);
 
 // compare [server_user] with [server_user]
 static long int compare_user_id(const gdsl_element_t E, void *VALUE)
@@ -78,7 +79,7 @@ int main(void)
  * Package Handling                                            *
 \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-static void handle_packet_auth(struct server_user *user, datapacket *dp)
+static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *dp)
 {
     int packet_type = datapacket_get_int(dp);
 
@@ -93,7 +94,7 @@ static void handle_packet_auth(struct server_user *user, datapacket *dp)
             datapacket_set_string(answer, name);
             datapacket_set_string(answer, msg);
 
-            send_to_all(user, answer);
+            send_to_all(ssl, answer);
 
             free(msg);
         }
@@ -112,7 +113,13 @@ static void handle_packet_auth(struct server_user *user, datapacket *dp)
 
                 send_to_user(tuser, answer);
 
-                server_ch_disconnect_user(tuser->ssl, &cb_cl_dc);
+                /* kick all connections of this user */
+                struct server_user_connection *c = tuser->connections;
+                while(c) {
+                    server_ch_disconnect_user(c->ssl, &cb_cl_dc);
+                    c = c->next;
+                    /* connection will be free'ed when callback is invoked */
+                }
             }
         }
         break;
@@ -155,7 +162,8 @@ static void handle_packet_auth(struct server_user *user, datapacket *dp)
 
         case MSG_LOGOUT: {
             printf("user logged out: %s\n", user->username);
-            server_ch_user_authed(-1, user->ssl);
+            //TODO: find out which client sent it
+            server_ch_user_authed(-1, ssl);
             remove_server_user_by_struct(user);
         }
         break;
@@ -179,20 +187,17 @@ static void handle_packet_unauth(SSL *ssl, datapacket *dp)
 
             struct server_user *user;
             int res;
-            bool logged = is_user_logged_in(uname);
-            /* check auth and if someone else already logged in */
-            if ((user = authorize_user(ssl, uname, upw, &res)) && !logged) {
+            /* check auth */
+            if ((user = authorize_user(ssl, uname, upw, &res))) {
                 add_server_user(user);
 
                 datapacket *answer = datapacket_create(MSG_WELCOME);
                 datapacket_set_string(answer, uname);
-                send_to_user(user, answer);
+                send_to_client(ssl, answer);
             }
             else {
                 datapacket *answer = datapacket_create(MSG_AUTH_FAILED);
-                datapacket_set_string(answer, logged ?
-                        "Already logged in on another device." :
-                        "Authentification failed.");
+                datapacket_set_string(answer, "Authentification failed.");
                 datapacket_set_int(answer, res);
 
                 size_t s = datapacket_finish(answer);
@@ -253,7 +258,7 @@ static void process_packet(struct server_client *sc, byte *data)
     if (sc->id > 0) {
         struct server_user *user = get_user_by_id(sc->id);
         if (user) {
-            handle_packet_auth(user, dp);
+            handle_packet_auth(sc->ssl, user, dp);
         }
         else {
             perror("pp: auth'ed client not in users list");
@@ -288,7 +293,12 @@ static void cb_cl_dc(struct server_client *sc)
     if (sc->id > 0) {
         struct server_user *user = get_user_by_id(sc->id);
         if (user) {
-            remove_server_user_by_struct(user);
+            /* remove that connection */
+            server_user_remove_connection(user, sc->ssl);
+
+            /* if no connections left, remove user from datastructure */
+            if (user->connections == NULL)
+                remove_server_user_by_struct(user);
         }
         else {
             perror("dc: auth'ed client not in users list");
@@ -325,9 +335,16 @@ static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd, i
     struct server_user *user = NULL;
     int uid = sql_check_user_auth(username, pwd, res);
     if (*res == SQLV_SUCCESS && uid != USER_ID_INVALID) {
-        user = server_user_create(uid, ssl, username);
+        /* check if user already logged in on other machine */
+        user = gdsl_rbtree_map_infix(users, &map_username, username);
+        /* if already logged in, add new connection */
+        if (user)
+            server_user_add_connection(user, ssl);
+        /* if not yet logged in, create new server user object */
+        else
+            user = server_user_create(uid, ssl, username);
     
-        // inform server_ch about the user's ID
+        /* inform server_ch about the user's ID */
         server_ch_user_authed(user->id, ssl);
     }
 
@@ -338,10 +355,23 @@ static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd, i
  * Message Passing                                             *
 \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+static int send_to_client(SSL *ssl, datapacket *dp)
+{
+    size_t s = datapacket_finish(dp);
+    server_ch_send(ssl, dp->data, s);
+    datapacket_destroy(dp);
+
+    return 0;
+}
+
 static int send_to_user(struct server_user *u_to, datapacket *dp)
 {
     size_t s = datapacket_finish(dp);
-    server_ch_send(u_to->ssl, dp->data, s);
+    struct server_user_connection *p = u_to->connections;
+    while (p) {
+        server_ch_send(p->ssl, dp->data, s);
+        p = p->next;
+    }
     datapacket_destroy(dp);
 
     return 0;
@@ -355,18 +385,21 @@ static int map_send_to_all(const gdsl_element_t e, gdsl_location_t l, void *ud)
         size_t data_len;
     } *d = (struct tripplet *)ud;
 
-    int fd_target = SSL_get_fd(((struct server_user *)e)->ssl);
-    SSL *ssl = ((struct server_user *)e)->ssl;
-
     int fd_from = SSL_get_fd(d->ssl);
 
-    if (fd_target != fd_from)
-        server_ch_send(ssl, d->data, d->data_len);
+    /* also send the message to other instances of the same user */
+    struct server_user_connection *c = ((struct server_user *)e)->connections;
+    while (c) {
+        int fd_target = SSL_get_fd(c->ssl);
+        if (fd_target != fd_from)
+            server_ch_send(c->ssl, d->data, d->data_len);
+        c = c->next;
+    }
 
     return GDSL_MAP_CONT;
 }
 
-static int send_to_all(struct server_user *u_from, datapacket *dp)
+static int send_to_all(SSL *ssl_from, datapacket *dp)
 {
     size_t data_len = datapacket_finish(dp);
 
@@ -374,7 +407,7 @@ static int send_to_all(struct server_user *u_from, datapacket *dp)
         SSL *ssl;
         void *data;
         size_t data_len;
-    } dp_data = { u_from->ssl, dp->data, data_len };
+    } dp_data = { ssl_from, dp->data, data_len };
 
     gdsl_rbtree_map_infix(users, &map_send_to_all, &dp_data);
 

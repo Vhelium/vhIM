@@ -2,6 +2,7 @@
 #define SERVER_CLIENT_H
 
 #include "openssl/ssl.h"
+#include "server_user.h"
 
 struct server_client
 {

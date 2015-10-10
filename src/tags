@@ -61,12 +61,13 @@ client_ch_destroy	client/client_ch.c	/^void client_ch_destroy()$/;"	f
 client_ch_listen	client/client_ch.c	/^void client_ch_listen(callback_msg_rcv_t cb_msg_rcv)$/;"	f
 client_ch_send	client/client_ch.c	/^void client_ch_send(byte *data, size_t data_len)$/;"	f
 client_ch_start	client/client_ch.c	/^int client_ch_start(char *host, int port)$/;"	f
-client_connect	client/client.c	/^static int client_connect(char *server, int port)$/;"	f	file:
+client_connect	client/client.c	/^static int client_connect(char *host, int port)$/;"	f	file:
 clients	server/server_ch.c	/^static gdsl_rbtree_t clients; \/\/ list of all connected clients$/;"	v	file:
 compare_user_fd_directly	server/server_ch.c	/^static long int compare_user_fd_directly(const gdsl_element_t E, void *VALUE)$/;"	f	file:
 compare_user_fd	server/server_ch.c	/^static long int compare_user_fd(const gdsl_element_t E, void *VALUE)$/;"	f	file:
 compare_user_id_directly	server/server.c	/^static long int compare_user_id_directly(const gdsl_element_t E, void *VALUE)$/;"	f	file:
 compare_user_id	server/server.c	/^static long int compare_user_id(const gdsl_element_t E, void *VALUE)$/;"	f	file:
+connections	server/server_user.h	/^    struct server_user_connection *connections;$/;"	m	struct:server_user	typeref:struct:server_user::server_user_connection
 ctx	client/client_ch.c	/^SSL_CTX *ctx;$/;"	v
 ctx	server/server_ch.c	/^static SSL_CTX *ctx;$/;"	v	file:
 data	network/datapacket.h	/^    byte *data;$/;"	m	struct:__anon1
@@ -88,14 +89,14 @@ datapacket_verify_size	network/datapacket.c	/^static void datapacket_verify_size
 datapacket	network/datapacket.h	/^} datapacket;$/;"	t	typeref:struct:__anon1
 db	sql/sql_ch.c	/^    char db[64];$/;"	m	struct:sql_conection	file:
 debugv	constants.h	12;"	d
-disconnect	client/client.c	/^static int disconnect()$/;"	f	file:
 errv	constants.h	16;"	d
 execute_command	client/client.c	/^static int execute_command(int type, char *argv[])$/;"	f	file:
 fdmax	server/server_ch.c	/^static int fdmax;$/;"	v	file:
 get_client_by_fd	server/server_ch.c	/^static struct server_client *get_client_by_fd(int fd)$/;"	f	file:
+get_is_connected_synced	client/client.c	/^static bool get_is_connected_synced()$/;"	f	file:
 get_user_by_id	server/server.c	/^static struct server_user *get_user_by_id(int id)$/;"	f	file:
 get_user_count	server/server.c	/^static size_t get_user_count()$/;"	f	file:
-handle_packet_auth	server/server.c	/^static void handle_packet_auth(struct server_user *user, datapacket *dp)$/;"	f	file:
+handle_packet_auth	server/server.c	/^static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *dp)$/;"	f	file:
 handle_packet_unauth	server/server.c	/^static void handle_packet_unauth(SSL *ssl, datapacket *dp)$/;"	f	file:
 id	server/server_client.h	/^    int id;$/;"	m	struct:server_client
 id	server/server_user.h	/^    int id;$/;"	m	struct:server_user
@@ -104,6 +105,8 @@ init_ctx	client/client_ch.c	/^SSL_CTX* init_ctx(void)$/;"	f
 init_server_ctx	server/server_ch.c	/^static SSL_CTX *init_server_ctx(void)$/;"	f	file:
 input_buffer	client/client.c	/^static char input_buffer[1024+1];$/;"	v	file:
 input_thread	client/client.c	/^static pthread_t input_thread;$/;"	v	file:
+is_connected	client/client.c	/^static bool is_connected = false;$/;"	v	file:
+is_decimal_number	utility/strings_helper.c	/^bool is_decimal_number(char *in)$/;"	f
 is_user_logged_in	server/server.c	/^static bool is_user_logged_in(char *uname)$/;"	f	file:
 listener	server/server_ch.c	/^static int listener;$/;"	v	file:
 load_certificates	server/server_ch.c	/^static void load_certificates(SSL_CTX* ctx, char* CertFile, char* KeyFile)$/;"	f	file:
@@ -116,6 +119,7 @@ map_write_usernames	server/server.c	/^static int map_write_usernames(const gdsl_
 master	server/server_ch.c	/^static fd_set master;$/;"	v	file:
 mutex_connected	client/client.c	/^static pthread_mutex_t mutex_connected;$/;"	v	file:
 next_word	utility/strings_helper.c	/^int next_word(char **in, char **out)$/;"	f
+next	server/server_user.h	/^    struct server_user_connection *next;$/;"	m	struct:server_user_connection	typeref:struct:server_user_connection::server_user_connection
 process_command	utility/command_parser.c	/^int process_command(char *input_buffer, int (*exec_cmd)(int, char**))$/;"	f
 process_input	client/client.c	/^void *process_input()$/;"	f
 process_packet	client/client.c	/^static void process_packet(void *sender, byte *data)$/;"	f	file:
@@ -127,7 +131,8 @@ read_line	utility/strings_helper.c	/^int read_line(char str[], int n)$/;"	f
 remove_server_user_by_id	server/server.c	/^static void remove_server_user_by_id(int id)$/;"	f	file:
 remove_server_user_by_struct	server/server.c	/^static void remove_server_user_by_struct(struct server_user *su)$/;"	f	file:
 sc_fd	server/server_client.c	/^int sc_fd(struct server_client *sc)$/;"	f
-send_to_all	server/server.c	/^static int send_to_all(struct server_user *u_from, datapacket *dp)$/;"	f	file:
+send_to_all	server/server.c	/^static int send_to_all(SSL *ssl_from, datapacket *dp)$/;"	f	file:
+send_to_client	server/server.c	/^static int send_to_client(SSL *ssl, datapacket *dp)$/;"	f	file:
 send_to_server	client/client.c	/^static int send_to_server(datapacket *dp)$/;"	f	file:
 send_to_user	server/server.c	/^static int send_to_user(struct server_user *u_to, datapacket *dp)$/;"	f	file:
 serv_addr	client/client_ch.c	/^static struct sockaddr_in serv_addr;$/;"	v	typeref:struct:sockaddr_in	file:
@@ -143,11 +148,15 @@ server_client_create	server/server_client.c	/^struct server_client *server_clien
 server_client_destroy	server/server_client.c	/^void server_client_destroy(struct server_client *sc)$/;"	f
 server_client	server/server_client.h	/^struct server_client$/;"	s
 server_init	server/server.c	/^static void server_init()$/;"	f	file:
+server_user_add_connection	server/server_user.c	/^void server_user_add_connection(struct server_user *su, SSL *ssl)$/;"	f
+server_user_connection	server/server_user.h	/^struct server_user_connection$/;"	s
 server_user_create	server/server_user.c	/^struct server_user *server_user_create(int id, SSL *ssl, char *username)$/;"	f
 server_user_destroy	server/server_user.c	/^void server_user_destroy(struct server_user *su)$/;"	f
+server_user_remove_connection	server/server_user.c	/^void server_user_remove_connection(struct server_user *su, SSL *ssl)$/;"	f
 server_user	server/server_user.h	/^struct server_user$/;"	s
 server	sql/sql_ch.c	/^    char server[64];$/;"	m	struct:sql_conection	file:
 server	client/client_ch.c	/^static struct hostent *server;$/;"	v	typeref:struct:hostent	file:
+set_is_connected_synced	client/client.c	/^static void set_is_connected_synced(bool b)$/;"	f	file:
 show_certs	client/client_ch.c	/^void show_certs(SSL* ssl)$/;"	f
 show_certs	server/server_ch.c	/^static void show_certs(SSL *ssl)$/;"	f	file:
 sockfd	client/client_ch.c	/^static int sockfd = 0;$/;"	v	file:
@@ -158,7 +167,7 @@ sql_check_user_auth	sql/sql_ch.c	/^int sql_check_user_auth(char *user, char *pw,
 sql_conection	sql/sql_ch.c	/^struct sql_conection {$/;"	s	file:
 sql_con	sql/sql_ch.c	/^} sql_con;$/;"	v	typeref:struct:sql_conection
 ssl	server/server_client.h	/^    SSL *ssl;$/;"	m	struct:server_client
-ssl	server/server_user.h	/^    SSL *ssl;$/;"	m	struct:server_user
+ssl	server/server_user.h	/^    SSL *ssl;$/;"	m	struct:server_user_connection
 ssl	client/client_ch.c	/^SSL *ssl;$/;"	v
 test_dp	test.c	/^static void test_dp()$/;"	f	file:
 test_ncurses	test.c	/^static void test_ncurses()$/;"	f	file:

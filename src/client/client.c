@@ -279,6 +279,8 @@ void *process_input()
                 datapacket_set_string(dp, input_buffer);
                 send_to_server(dp);
             }
+            else
+                printf("Not connected to a server.\n");
         }
     }
     return NULL;
