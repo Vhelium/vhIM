@@ -50,6 +50,7 @@ bc_to_bool	network/byteconverter.c	/^bool bc_to_bool(byte *data)$/;"	f
 bc_to_int	network/byteconverter.c	/^int bc_to_int(byte *data)$/;"	f
 bp_process_data	network/byteprocessor.c	/^int bp_process_data(byte *data, ssize_t data_len, byte *rest_buffer,$/;"	f
 buf_size	network/datapacket.h	/^    size_t buf_size; \/\/ current buffer size, in bytes$/;"	m	struct:__anon1
+bytes_to_string	utility/strings_helper.c	/^void bytes_to_string(const char *in, int in_len, char *out)$/;"	f
 byte	constants.h	/^typedef unsigned char byte;$/;"	t
 callback_cl_cntd_t	server/server_ch.h	/^typedef void (*callback_cl_cntd_t)(struct server_client *su);$/;"	t
 callback_cl_dc	server/server_ch.h	/^typedef void (*callback_cl_dc)(struct server_client *su);$/;"	t
@@ -174,6 +175,7 @@ test_ncurses	test.c	/^static void test_ncurses()$/;"	f	file:
 test_salt	test.c	/^static void test_salt()$/;"	f	file:
 test_sql	test.c	/^static void test_sql()$/;"	f	file:
 threaded_connect	client/client.c	/^void *threaded_connect(void *arg)$/;"	f
+ubytes_to_string	utility/strings_helper.c	/^void ubytes_to_string(const unsigned char *in, int in_len, char *out)$/;"	f
 user	sql/sql_ch.c	/^    char user[64];$/;"	m	struct:sql_conection	file:
 username	server/server_user.h	/^    char *username;$/;"	m	struct:server_user
 users	server/server.c	/^static gdsl_rbtree_t users;$/;"	v	file:

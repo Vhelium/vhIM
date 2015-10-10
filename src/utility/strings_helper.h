@@ -15,4 +15,8 @@ int next_word(char **in, char **out);
 
 int read_line(char str[], int n);
 
+void bytes_to_string(const char *in, int in_len, char *out);
+
+void ubytes_to_string(const unsigned char *in, int in_len, char *out);
+
 #endif

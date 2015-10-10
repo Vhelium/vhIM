@@ -45,3 +45,23 @@ int read_line(char str[], int n)
     str[i] = '\0';
     return i;
 }
+
+void bytes_to_string(const char *in, int in_len, char *out)
+{
+    int i;
+    for(i=0; i<in_len; ++i) {
+        sprintf(out, "%0.2X", in[i]);
+        out+=2;
+    }
+    *out = '\0';
+}
+
+void ubytes_to_string(const unsigned char *in, int in_len, char *out)
+{
+    int i;
+    for(i=0; i<in_len; ++i) {
+        sprintf(out, "%0.2X", in[i]);
+        out+=2;
+    }
+    *out = '\0';
+}

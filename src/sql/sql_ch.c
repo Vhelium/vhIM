@@ -4,9 +4,11 @@
 #include <string.h>
 
 #include <openssl/sha.h>
+#include <openssl/rand.h>
 
 #include "sql_ch.h"
 #include "../constants.h"
+#include "../utility/strings_helper.h"
 
 struct sql_conection {
     char server[64];
@@ -70,18 +72,12 @@ int sql_check_user_auth(char *user, char *pw, int *result)
         SHA256_CTX context;
         unsigned char md[SHA256_DIGEST_LENGTH];
         SHA256_Init(&context);
-        SHA256_Update(&context, (unsigned char*)salt_pw, strlen(salt_pw));
+        SHA256_Update(&context, salt_pw, strlen(salt_pw));
         SHA256_Final(md, &context);
 
         /* get hex representation */
         char hexed_hash[2*SHA256_DIGEST_LENGTH + 1];
-        char *p = hexed_hash;
-        int i;
-        for(i=0; i<sizeof(md); ++i) {
-            sprintf(p, "%0.2X", md[i]);
-            p+=2;
-        }
-        *p = '\0';
+        ubytes_to_string(md, sizeof(md), hexed_hash);
 
         free(salt_pw);
 
@@ -146,33 +142,33 @@ int sql_ch_add_user(char *user, char *pw)
     mysql_free_result(res);
 
     if (result == SQLV_SUCCESS) { /* user doesn't exist */
-        //TODO: random salt (doesnt matter if ascii codes or not) */
-        char *salt = "12345678123456781234567812345678";
+        /* generate random salt */
+        unsigned char salt_bytes[32];
+        RAND_bytes(salt_bytes, 32);
+        /* convert bytes to hex representation */
+        char hexed_salt[2*sizeof(salt_bytes) + 1];
+        ubytes_to_string(salt_bytes, sizeof(salt_bytes), hexed_salt);
+
         /* prepend salt to entered pw */
-        char *salt_pw = malloc(strlen(salt) + strlen(pw)+1);
-        strcpy(salt_pw, salt);
+        char *salt_pw = malloc(strlen(hexed_salt) + strlen(pw)+1);
+        strcpy(salt_pw, hexed_salt);
         strcat(salt_pw, pw);
 
         /* hash it */
         SHA256_CTX context;
         unsigned char md[SHA256_DIGEST_LENGTH];
         SHA256_Init(&context);
-        SHA256_Update(&context, (unsigned char*)salt_pw, strlen(salt_pw));
+        SHA256_Update(&context, salt_pw, strlen(salt_pw));
         SHA256_Final(md, &context);
         
-        char hexed_hash[2*SHA256_DIGEST_LENGTH + 1];
-        char *p = hexed_hash;
-        int i;
-        for(i=0; i<sizeof(md); ++i) {
-            sprintf(p, "%0.2X", md[i]);
-            p+=2;
-        }
-        *p = '\0';
+        /* convert bytes to readable string -> size doubled */
+        char hexed_hash[2*sizeof(md) + 1];
+        ubytes_to_string(md, sizeof(md), hexed_hash);
 
         free(salt_pw);
 
         //TODO: prevent slq injection via username
-        sprintf(query, "INSERT INTO `users` VALUES(DEFAULT, '%s', '%s', '%s')", user, hexed_hash, salt);
+        sprintf(query, "INSERT INTO `users` VALUES(DEFAULT, '%s', '%s', '%s')", user, hexed_hash, hexed_salt);
 
         if (mysql_query(con, query)) {
             errv("%s\n", mysql_error(con));

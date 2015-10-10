@@ -51,6 +51,7 @@ bc_to_int	src/network/byteconverter.c	/^int bc_to_int(byte *data)$/;"	f
 bp_process_data	src/network/byteprocessor.c	/^int bp_process_data(byte *data, ssize_t data_len, byte *rest_buffer,$/;"	f
 buf_size	src/network/datapacket.h	/^    size_t buf_size; \/\/ current buffer size, in bytes$/;"	m	struct:__anon1
 byte	src/constants.h	/^typedef unsigned char byte;$/;"	t
+bytes_to_string	src/utility/strings_helper.c	/^void bytes_to_string(const char *in, int in_len, char **out)$/;"	f
 callback_cl_cntd_t	src/server/server_ch.h	/^typedef void (*callback_cl_cntd_t)(struct server_client *su);$/;"	t
 callback_cl_dc	src/server/server_ch.h	/^typedef void (*callback_cl_dc)(struct server_client *su);$/;"	t
 callback_msg_rcv_t	src/network/byteprocessor.h	/^typedef void (*callback_msg_rcv_t)(void *sender, byte *data);$/;"	t
@@ -96,7 +97,7 @@ get_client_by_fd	src/server/server_ch.c	/^static struct server_client *get_clien
 get_is_connected_synced	src/client/client.c	/^static bool get_is_connected_synced()$/;"	f	file:
 get_user_by_id	src/server/server.c	/^static struct server_user *get_user_by_id(int id)$/;"	f	file:
 get_user_count	src/server/server.c	/^static size_t get_user_count()$/;"	f	file:
-handle_packet_auth	src/server/server.c	/^static void handle_packet_auth(struct server_user *user, datapacket *dp)$/;"	f	file:
+handle_packet_auth	src/server/server.c	/^static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *dp)$/;"	f	file:
 handle_packet_unauth	src/server/server.c	/^static void handle_packet_unauth(SSL *ssl, datapacket *dp)$/;"	f	file:
 id	src/server/server_client.h	/^    int id;$/;"	m	struct:server_client
 id	src/server/server_user.h	/^    int id;$/;"	m	struct:server_user
@@ -131,7 +132,8 @@ read_line	src/utility/strings_helper.c	/^int read_line(char str[], int n)$/;"	f
 remove_server_user_by_id	src/server/server.c	/^static void remove_server_user_by_id(int id)$/;"	f	file:
 remove_server_user_by_struct	src/server/server.c	/^static void remove_server_user_by_struct(struct server_user *su)$/;"	f	file:
 sc_fd	src/server/server_client.c	/^int sc_fd(struct server_client *sc)$/;"	f
-send_to_all	src/server/server.c	/^static int send_to_all(struct server_user *u_from, datapacket *dp)$/;"	f	file:
+send_to_all	src/server/server.c	/^static int send_to_all(SSL *ssl_from, datapacket *dp)$/;"	f	file:
+send_to_client	src/server/server.c	/^static int send_to_client(SSL *ssl, datapacket *dp)$/;"	f	file:
 send_to_server	src/client/client.c	/^static int send_to_server(datapacket *dp)$/;"	f	file:
 send_to_user	src/server/server.c	/^static int send_to_user(struct server_user *u_to, datapacket *dp)$/;"	f	file:
 serv_addr	src/client/client_ch.c	/^static struct sockaddr_in serv_addr;$/;"	v	typeref:struct:sockaddr_in	file:
