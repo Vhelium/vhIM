@@ -8,6 +8,7 @@ BYTECONVERTER_H	network/byteconverter.h	2;"	d
 BYTEPROCESSOR_H	network/byteprocessor.h	2;"	d
 CLIENT_CH_H	client/client_ch.h	2;"	d
 CMD_CONNECT	network/messagetypes.h	17;"	d
+CMD_DISCONNECT	network/messagetypes.h	18;"	d
 COMMAND_PARSER_H	utility/command_parser.h	2;"	d
 CONSTANTS_H	constants.h	2;"	d
 DATAPACKET_H	network/datapacket.h	2;"	d
@@ -63,6 +64,7 @@ client_ch_listen	client/client_ch.c	/^void client_ch_listen(callback_msg_rcv_t c
 client_ch_send	client/client_ch.c	/^void client_ch_send(byte *data, size_t data_len)$/;"	f
 client_ch_start	client/client_ch.c	/^int client_ch_start(char *host, int port)$/;"	f
 client_connect	client/client.c	/^static int client_connect(char *host, int port)$/;"	f	file:
+client_disconnect	client/client.c	/^static int client_disconnect()$/;"	f	file:
 clients	server/server_ch.c	/^static gdsl_rbtree_t clients; \/\/ list of all connected clients$/;"	v	file:
 compare_user_fd_directly	server/server_ch.c	/^static long int compare_user_fd_directly(const gdsl_element_t E, void *VALUE)$/;"	f	file:
 compare_user_fd	server/server_ch.c	/^static long int compare_user_fd(const gdsl_element_t E, void *VALUE)$/;"	f	file:

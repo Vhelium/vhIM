@@ -51,7 +51,7 @@ bc_to_int	src/network/byteconverter.c	/^int bc_to_int(byte *data)$/;"	f
 bp_process_data	src/network/byteprocessor.c	/^int bp_process_data(byte *data, ssize_t data_len, byte *rest_buffer,$/;"	f
 buf_size	src/network/datapacket.h	/^    size_t buf_size; \/\/ current buffer size, in bytes$/;"	m	struct:__anon1
 byte	src/constants.h	/^typedef unsigned char byte;$/;"	t
-bytes_to_string	src/utility/strings_helper.c	/^void bytes_to_string(const char *in, int in_len, char **out)$/;"	f
+bytes_to_string	src/utility/strings_helper.c	/^void bytes_to_string(const char *in, int in_len, char *out)$/;"	f
 callback_cl_cntd_t	src/server/server_ch.h	/^typedef void (*callback_cl_cntd_t)(struct server_client *su);$/;"	t
 callback_cl_dc	src/server/server_ch.h	/^typedef void (*callback_cl_dc)(struct server_client *su);$/;"	t
 callback_msg_rcv_t	src/network/byteprocessor.h	/^typedef void (*callback_msg_rcv_t)(void *sender, byte *data);$/;"	t
@@ -63,6 +63,7 @@ client_ch_listen	src/client/client_ch.c	/^void client_ch_listen(callback_msg_rcv
 client_ch_send	src/client/client_ch.c	/^void client_ch_send(byte *data, size_t data_len)$/;"	f
 client_ch_start	src/client/client_ch.c	/^int client_ch_start(char *host, int port)$/;"	f
 client_connect	src/client/client.c	/^static int client_connect(char *host, int port)$/;"	f	file:
+client_disconnect	src/client/client.c	/^static int client_disconnect()$/;"	f	file:
 clients	src/server/server_ch.c	/^static gdsl_rbtree_t clients; \/\/ list of all connected clients$/;"	v	file:
 compare_user_fd	src/server/server_ch.c	/^static long int compare_user_fd(const gdsl_element_t E, void *VALUE)$/;"	f	file:
 compare_user_fd_directly	src/server/server_ch.c	/^static long int compare_user_fd_directly(const gdsl_element_t E, void *VALUE)$/;"	f	file:
@@ -175,6 +176,7 @@ test_ncurses	src/test.c	/^static void test_ncurses()$/;"	f	file:
 test_salt	src/test.c	/^static void test_salt()$/;"	f	file:
 test_sql	src/test.c	/^static void test_sql()$/;"	f	file:
 threaded_connect	src/client/client.c	/^void *threaded_connect(void *arg)$/;"	f
+ubytes_to_string	src/utility/strings_helper.c	/^void ubytes_to_string(const unsigned char *in, int in_len, char *out)$/;"	f
 user	src/sql/sql_ch.c	/^    char user[64];$/;"	m	struct:sql_conection	file:
 username	src/server/server_user.h	/^    char *username;$/;"	m	struct:server_user
 users	src/server/server.c	/^static gdsl_rbtree_t users;$/;"	v	file:

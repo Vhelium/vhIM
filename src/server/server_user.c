@@ -2,6 +2,7 @@
 #include <string.h>
 #include "server_user.h"
 
+#include "../constants.h"
 #include "openssl/ssl.h"
 
 struct server_user *server_user_create(int id, SSL *ssl, char *username)
@@ -10,6 +11,7 @@ struct server_user *server_user_create(int id, SSL *ssl, char *username)
     user->id = id;
     user->connections = malloc(sizeof(struct server_user_connection));
     user->connections->ssl = ssl;
+    user->connections->next = NULL;
     user->username = strdup(username);
 
     return user;
@@ -17,6 +19,7 @@ struct server_user *server_user_create(int id, SSL *ssl, char *username)
 
 void server_user_destroy(struct server_user *su)
 {
+    debugv("destroying user..\n");
     free(su->username);
     su->id = -1;
     /* destroy all items in linked list */

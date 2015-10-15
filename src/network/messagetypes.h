@@ -15,5 +15,6 @@
 #define MSG_CMD_KICK_ID 1001
 
 #define CMD_CONNECT 2001
+#define CMD_DISCONNECT 2002
 
 #endif

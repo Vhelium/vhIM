@@ -96,6 +96,10 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
         free (host);
         free (port);
     }
+    /* disconnect */
+    else if (strcmp(type, "disconnect") == 0 || strcmp(type, "dc") == 0) {
+        exec_cmd(CMD_DISCONNECT, NULL);
+    }
     
     free(type);
 

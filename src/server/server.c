@@ -338,11 +338,15 @@ static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd, i
         /* check if user already logged in on other machine */
         user = gdsl_rbtree_map_infix(users, &map_username, username);
         /* if already logged in, add new connection */
-        if (user)
+        if (user) {
+            debugv("User already logged in, adding new connection.\n");
             server_user_add_connection(user, ssl);
+        }
         /* if not yet logged in, create new server user object */
-        else
+        else {
+            debugv("adding new server user object.\n");
             user = server_user_create(uid, ssl, username);
+        }
     
         /* inform server_ch about the user's ID */
         server_ch_user_authed(user->id, ssl);

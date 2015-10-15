@@ -24,6 +24,7 @@ static char arg_host[128] = {0};
 static int arg_port;
 
 static int client_connect(char *server, int port);
+static int client_disconnect();
 
 /* Send datapacket to server
  * Automatically frees the datapacket afterwards
@@ -179,6 +180,11 @@ static int execute_command(int type, char *argv[])
         }
         break;
 
+        case CMD_DISCONNECT: {
+            client_disconnect();
+        }
+        break;
+
         default:
             printf("Invalid command: %d", type);
             return 1;
@@ -240,13 +246,7 @@ static int client_connect(char *host, int port)
     else
         arg_port = port;
 
-    /* if already connected to a server be sure to disconnect first */
-    if (get_is_connected_synced()) {
-        /* wait for connection thread to exit */
-        //TODO: interrupt thread
-        void *status;
-        pthread_join(input_thread, &status);
-    }
+    client_disconnect();
 
     /* start new connection thread */
     set_is_connected_synced(true);
@@ -258,6 +258,20 @@ static int client_connect(char *host, int port)
         debugv("input thread started.\n\n");
     }
 
+    return 0;
+}
+
+static int client_disconnect()
+{
+    /* if already connected to a server be sure to disconnect first */
+    if (get_is_connected_synced()) {
+        /* close socket */
+        client_ch_destroy();
+        set_is_connected_synced(false);
+        /* wait for listener thread to quit */
+        void *status;
+        pthread_join(input_thread, &status);
+    }
     return 0;
 }
 
