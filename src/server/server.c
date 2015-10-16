@@ -38,6 +38,8 @@ static void write_usernames_to_dp(datapacket *dp);
 static bool is_user_logged_in(char *uname);
 static struct server_user *authorize_client(SSL *ssl, char* username, char* pwd, int *res);
 
+static bool is_allowed(unsigned char priv, int cmd);
+
 // Message Passing
 static int send_to_client(SSL *ssl, datapacket *dp);
 static int send_to_user(struct server_user *u_to, datapacket *dp);
@@ -101,24 +103,26 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
         break;
 
         case MSG_CMD_KICK_ID: {
-            int tid = datapacket_get_int(dp);
-            printf("received kick request: %d\n", tid);
-            // check if user exists
-            struct server_user *tuser = get_user_by_id(tid);
-            if (tuser) {
-                printf("user (%d) kicks user (%d)\n", user->id, tid);
-                datapacket *answer = datapacket_create(MSG_BROADCAST);
-                datapacket_set_string(answer, "admin");
-                datapacket_set_string(answer, "you got kicked, fggt!");
+            if (is_allowed(user->p_level, MSG_CMD_KICK_ID)) {
+                int tid = datapacket_get_int(dp);
+                printf("received kick request: %d\n", tid);
+                // check if user exists
+                struct server_user *tuser = get_user_by_id(tid);
+                if (tuser) {
+                    printf("user (%d) kicks user (%d)\n", user->id, tid);
+                    datapacket *answer = datapacket_create(MSG_BROADCAST);
+                    datapacket_set_string(answer, "admin");
+                    datapacket_set_string(answer, "you got kicked, fggt!");
 
-                send_to_user(tuser, answer);
+                    send_to_user(tuser, answer);
 
-                /* kick all connections of this user */
-                struct server_user_connection *c = tuser->connections;
-                while(c) {
-                    server_ch_disconnect_client(c->ssl, &cb_cl_dc);
-                    c = c->next;
-                    /* connection will be free'ed when callback is invoked */
+                    /* kick all connections of this user */
+                    struct server_user_connection *c = tuser->connections;
+                    while(c) {
+                        server_ch_disconnect_client(c->ssl, &cb_cl_dc);
+                        c = c->next;
+                        /* connection will be free'ed when callback is invoked */
+                    }
                 }
             }
         }
@@ -162,9 +166,15 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
 
         case MSG_LOGOUT: {
             printf("user logged out: %s\n", user->username);
-            //TODO: find out which client sent it
+            /* unauth' client */
             server_ch_client_authed(-1, ssl);
-            remove_server_user_by_struct(user);
+
+            /* remove that connection from the user */
+            server_user_remove_connection(user, ssl);
+
+            /* if no connections left, remove user from datastructure */
+            if (user->connections == NULL)
+                remove_server_user_by_struct(user);
         }
         break;
 
@@ -172,6 +182,14 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
             printf("user wants to disconnect: %s\n", user->username);
             server_ch_disconnect_client(ssl, &cb_cl_dc);
             /* user get's automatically removed if no other client is connected */
+        }
+        break;
+
+        case MSG_GRANT_PRIVILEGES: {
+            int uid = datapacket_get_int(dp);
+            int priv = datapacket_get_int(dp);
+            int res = sql_ch_update_privileges(uid, priv);
+            printf("Granting user with id=%d new privilege lvl: %d  (%d)\n", uid, priv, res);
         }
         break;
 
@@ -253,6 +271,14 @@ static void handle_packet_unauth(SSL *ssl, datapacket *dp)
             free(upw);
         }
         break;
+
+        case MSG_DISCONNECT: {
+            printf("user wants to disconnect: unauth'ed\n");
+            server_ch_disconnect_client(ssl, &cb_cl_dc);
+            /* user get's automatically removed if no other client is connected */
+        }
+        break;
+
 
         default:
             errv("unauth'ed packet(%d) dropped.", packet_type);
@@ -339,6 +365,17 @@ static bool is_user_logged_in(char *uname)
     return u != NULL;
 }
 
+static bool is_allowed(unsigned char priv, int cmd)
+{
+    switch(cmd) {
+        case MSG_CMD_KICK_ID:
+            return priv >= 8;
+        case MSG_GRANT_PRIVILEGES:
+            return priv >= 8;
+        default: return false;
+    }
+}
+
 static struct server_user *authorize_client(SSL *ssl, char *username, char* pwd, int *res)
 {
     struct server_user *user = NULL;
@@ -355,7 +392,7 @@ static struct server_user *authorize_client(SSL *ssl, char *username, char* pwd,
         /* if not yet logged in, create new server user object */
         else {
             debugv("adding new server user object.\n");
-            user = server_user_create(uid, ssl, username);
+            user = server_user_create(uid, ssl, username, sql_ch_load_privileges(uid));
         }
     
         /* inform server_ch about the user's ID */

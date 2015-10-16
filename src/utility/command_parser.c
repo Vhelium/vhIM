@@ -84,6 +84,10 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
     else if (strcmp(type, "who") == 0) {
         exec_cmd(MSG_WHO, NULL);
     }
+    /* help */
+    else if (strcmp(type, "help") == 0) {
+        exec_cmd(CMD_HELP, NULL);
+    }
      /* connect */
     else if (strcmp(type, "connect") == 0) {
         char *host = NULL;
@@ -99,6 +103,23 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
     /* disconnect */
     else if (strcmp(type, "disconnect") == 0 || strcmp(type, "dc") == 0) {
         exec_cmd(CMD_DISCONNECT, NULL);
+    }
+    /* grant privileges*/
+    else if (strcmp(type, "grant") == 0) {
+        char *uid;
+        if (next_word(&cmd, &uid)) {
+            char *lvl;
+            if( next_word(&cmd, &lvl)) {
+                char *a[] = {uid, lvl};
+                exec_cmd(MSG_GRANT_PRIVILEGES, a);
+            }
+            else
+                ret = 2;
+            free(lvl);
+        }
+        else
+            ret = 2;
+        free (uid);
     }
     
     free(type);

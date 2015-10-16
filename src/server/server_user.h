@@ -14,10 +14,11 @@ struct server_user
     int id;
     struct server_user_connection *connections;
     char *username;
+    unsigned char p_level;
 };
 
 /* new memory will be allocated for username and the linked list for connections */
-struct server_user *server_user_create(int id, SSL *ssl, char *username);
+struct server_user *server_user_create(int id, SSL *ssl, char *username, unsigned char p_level);
 
 /* has to be invoked manually */
 void server_user_destroy(struct server_user *su);

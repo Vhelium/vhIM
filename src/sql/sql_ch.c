@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <mysql.h>
 #include <string.h>
 
@@ -168,7 +169,7 @@ int sql_ch_add_user(char *user, char *pw)
         free(salt_pw);
 
         //TODO: prevent slq injection via username
-        sprintf(query, "INSERT INTO `users` VALUES(DEFAULT, '%s', '%s', '%s')", user, hexed_hash, hexed_salt);
+        sprintf(query, "INSERT INTO `users` VALUES(DEFAULT, '%s', '%s', '%s', '0')", user, hexed_hash, hexed_salt);
 
         if (mysql_query(con, query)) {
             errv("%s\n", mysql_error(con));
@@ -186,6 +187,72 @@ END:
     mysql_close(con);
 
     return result;
+}
+
+unsigned char sql_ch_load_privileges(int uid)
+{
+    MYSQL *con;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    unsigned char priv = 0;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        goto END;
+    }
+
+    sprintf(query, "SELECT `privilege` FROM `users` WHERE `id`='%d'", uid);
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    if ((row = mysql_fetch_row(res)) != NULL) {
+        priv = atoi(row[0]);
+    }
+    else {
+        goto QUERY_FAIL;
+    }
+
+QUERY_FAIL:
+    mysql_free_result(res);
+
+END:
+    mysql_close(con);
+
+    return priv;
+}
+
+int sql_ch_update_privileges(int uid, unsigned char p)
+{
+    MYSQL *con;
+    int r = 0;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        r = 2;
+        goto END;
+    }
+
+    sprintf(query, "UPDATE `users` SET `privilege`='%u' WHERE `id`='%d'",
+            (unsigned int)p, uid);
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        r = 3;
+        goto END;
+    }
+
+END:
+    mysql_close(con);
+
+    return r;
 }
 
 void sql_ch_destroy()

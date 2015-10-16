@@ -12,10 +12,12 @@
 #define MSG_LOGOUT 0xa
 #define MSG_WHO 0xb
 #define MSG_DISCONNECT 0xc
+#define MSG_GRANT_PRIVILEGES 0xd
 
 #define MSG_CMD_KICK_ID 1001
 
 #define CMD_CONNECT 2001
 #define CMD_DISCONNECT 2002
+#define CMD_HELP 2003
 
 #endif

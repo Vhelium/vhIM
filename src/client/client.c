@@ -185,6 +185,23 @@ static int execute_command(int type, char *argv[])
         }
         break;
 
+        case MSG_GRANT_PRIVILEGES: {
+            if (is_decimal_number(argv[0]) && is_decimal_number(argv[1])) {
+                datapacket *dp = datapacket_create(MSG_GRANT_PRIVILEGES);
+                datapacket_set_int(dp, atoi(argv[0]));
+                datapacket_set_int(dp, atoi(argv[1]));
+                send_to_server(dp);
+            }
+            else
+                printf("invalid arguments.\n");
+        }
+        break;
+
+        case CMD_HELP: {
+            printf("Go fuck yourself.\n");
+        }
+        break;
+
         default:
             printf("Invalid command: %d", type);
             return 1;

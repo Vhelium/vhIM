@@ -5,7 +5,8 @@
 #include "../constants.h"
 #include "openssl/ssl.h"
 
-struct server_user *server_user_create(int id, SSL *ssl, char *username)
+struct server_user *server_user_create(int id, SSL *ssl, char *username,
+        unsigned char p_level)
 {
     struct server_user *user = malloc(sizeof(struct server_user));
     user->id = id;
@@ -13,6 +14,7 @@ struct server_user *server_user_create(int id, SSL *ssl, char *username)
     user->connections->ssl = ssl;
     user->connections->next = NULL;
     user->username = strdup(username);
+    user->p_level = p_level;
 
     return user;
 }

@@ -15,6 +15,10 @@ int sql_check_user_auth(char *user, char *pw, int *res);
 
 int sql_ch_add_user(char *user, char *pw);
 
+unsigned char sql_ch_load_privileges(int uid);
+
+int sql_ch_update_privileges(int uid, unsigned char p);
+
 void sql_ch_destroy();
 
 #endif
