@@ -36,7 +36,7 @@ static void write_usernames_to_dp(datapacket *dp);
 
 // User Management
 static bool is_user_logged_in(char *uname);
-static struct server_user *authorize_user(SSL *ssl, char* username, char* pwd, int *res);
+static struct server_user *authorize_client(SSL *ssl, char* username, char* pwd, int *res);
 
 // Message Passing
 static int send_to_client(SSL *ssl, datapacket *dp);
@@ -116,7 +116,7 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
                 /* kick all connections of this user */
                 struct server_user_connection *c = tuser->connections;
                 while(c) {
-                    server_ch_disconnect_user(c->ssl, &cb_cl_dc);
+                    server_ch_disconnect_client(c->ssl, &cb_cl_dc);
                     c = c->next;
                     /* connection will be free'ed when callback is invoked */
                 }
@@ -163,8 +163,15 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
         case MSG_LOGOUT: {
             printf("user logged out: %s\n", user->username);
             //TODO: find out which client sent it
-            server_ch_user_authed(-1, ssl);
+            server_ch_client_authed(-1, ssl);
             remove_server_user_by_struct(user);
+        }
+        break;
+
+        case MSG_DISCONNECT: {
+            printf("user wants to disconnect: %s\n", user->username);
+            server_ch_disconnect_client(ssl, &cb_cl_dc);
+            /* user get's automatically removed if no other client is connected */
         }
         break;
 
@@ -188,8 +195,10 @@ static void handle_packet_unauth(SSL *ssl, datapacket *dp)
             struct server_user *user;
             int res;
             /* check auth */
-            if ((user = authorize_user(ssl, uname, upw, &res))) {
-                add_server_user(user);
+            if ((user = authorize_client(ssl, uname, upw, &res))) {
+                /* if not already added from other client */
+                if (res != SQLV_USER_ALREADY_LOGGED_IN)
+                    add_server_user(user);
 
                 datapacket *answer = datapacket_create(MSG_WELCOME);
                 datapacket_set_string(answer, uname);
@@ -330,7 +339,7 @@ static bool is_user_logged_in(char *uname)
     return u != NULL;
 }
 
-static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd, int *res)
+static struct server_user *authorize_client(SSL *ssl, char *username, char* pwd, int *res)
 {
     struct server_user *user = NULL;
     int uid = sql_check_user_auth(username, pwd, res);
@@ -340,6 +349,7 @@ static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd, i
         /* if already logged in, add new connection */
         if (user) {
             debugv("User already logged in, adding new connection.\n");
+            *res = SQLV_USER_ALREADY_LOGGED_IN;
             server_user_add_connection(user, ssl);
         }
         /* if not yet logged in, create new server user object */
@@ -349,7 +359,7 @@ static struct server_user *authorize_user(SSL *ssl, char *username, char* pwd, i
         }
     
         /* inform server_ch about the user's ID */
-        server_ch_user_authed(user->id, ssl);
+        server_ch_client_authed(user->id, ssl);
     }
 
     return user;
@@ -381,13 +391,15 @@ static int send_to_user(struct server_user *u_to, datapacket *dp)
     return 0;
 }
 
-static int map_send_to_all(const gdsl_element_t e, gdsl_location_t l, void *ud)
-{
-    struct tripplet {
+struct sender_triplet {
         SSL *ssl;
         void *data;
         size_t data_len;
-    } *d = (struct tripplet *)ud;
+};
+
+static int map_send_to_all(const gdsl_element_t e, gdsl_location_t l, void *ud)
+{
+    struct sender_triplet *d = (struct sender_triplet*)ud;
 
     int fd_from = SSL_get_fd(d->ssl);
 
@@ -407,11 +419,7 @@ static int send_to_all(SSL *ssl_from, datapacket *dp)
 {
     size_t data_len = datapacket_finish(dp);
 
-    struct tripplet {
-        SSL *ssl;
-        void *data;
-        size_t data_len;
-    } dp_data = { ssl_from, dp->data, data_len };
+    struct sender_triplet dp_data = { ssl_from, dp->data, data_len };
 
     gdsl_rbtree_map_infix(users, &map_send_to_all, &dp_data);
 

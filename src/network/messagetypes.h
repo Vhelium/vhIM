@@ -11,6 +11,7 @@
 #define MSG_REGISTR_FAILED 0x09
 #define MSG_LOGOUT 0xa
 #define MSG_WHO 0xb
+#define MSG_DISCONNECT 0xc
 
 #define MSG_CMD_KICK_ID 1001
 

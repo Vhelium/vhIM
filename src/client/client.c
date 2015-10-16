@@ -265,6 +265,10 @@ static int client_disconnect()
 {
     /* if already connected to a server be sure to disconnect first */
     if (get_is_connected_synced()) {
+        /* send msg to server */
+        datapacket *msg = datapacket_create(MSG_DISCONNECT);
+        send_to_server(msg);
+
         /* close socket */
         client_ch_destroy();
         set_is_connected_synced(false);

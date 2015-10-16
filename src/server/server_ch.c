@@ -33,8 +33,8 @@ static int listener;
 
 /* client management */
 static gdsl_rbtree_t clients; // list of all connected clients
-static void server_ch_user_connected(int fd, SSL *ssl, callback_cl_cntd_t cb_cl_cntd);
-static void server_ch_user_disconnected(int fd, callback_cl_dc cb_cl_dc);
+static void server_ch_client_connected(int fd, SSL *ssl, callback_cl_cntd_t cb_cl_cntd);
+static void server_ch_client_disconnected(int fd, callback_cl_dc cb_cl_dc);
 
 /* SSL variables */
 static SSL_CTX *ctx;
@@ -43,26 +43,26 @@ static void load_certificates(SSL_CTX* ctx, char* CertFile, char* KeyFile);
 static void show_certs(SSL *ssl);
 
 /* compare [server_client] with [server_client] */
-static long int compare_user_fd(const gdsl_element_t E, void *VALUE)
+static long int compare_client_fd(const gdsl_element_t E, void *VALUE)
 {
     return sc_fd((struct server_client *)E) - sc_fd((struct server_client *)VALUE);
 }
 
 /* compare [server_client] with [fd] */
-static long int compare_user_fd_directly(const gdsl_element_t E, void *VALUE)
+static long int compare_client_fd_directly(const gdsl_element_t E, void *VALUE)
 {
     return sc_fd((struct server_client *)E) - *((int *)VALUE);
 }
 
 static struct server_client *get_client_by_fd(int fd)
 {
-    return gdsl_rbtree_search(clients, &compare_user_fd_directly, &fd);
+    return gdsl_rbtree_search(clients, &compare_client_fd_directly, &fd);
 }
 
 int server_ch_start(char *port)
 {
     // init datastructures
-    clients = gdsl_rbtree_alloc("CLIENTS", NULL, NULL, &compare_user_fd);
+    clients = gdsl_rbtree_alloc("CLIENTS", NULL, NULL, &compare_client_fd);
 
     // initialize SSL
     SSL_library_init();
@@ -184,7 +184,7 @@ void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
                             close(i);
                         }
                         else {
-                            server_ch_user_connected(newfd, ssl, cb_cl_cntd);
+                            server_ch_client_connected(newfd, ssl, cb_cl_cntd);
                         }
                     }
                 }
@@ -201,7 +201,7 @@ void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
                         else
                             perror("recv");
 
-                        server_ch_user_disconnected(i, cb_cl_dc);
+                        server_ch_client_disconnected(i, cb_cl_dc);
 
                         // clean up connection
                         FD_CLR(i, &master);
@@ -212,7 +212,7 @@ void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
                         debugv("bytes received: %ld\n", nbytes);
                         res = bp_process_data(data_buffer, nbytes,
                                 rest_buffer, &rest_buffer_len,
-                                gdsl_rbtree_search(clients, &compare_user_fd_directly, &i),
+                                gdsl_rbtree_search(clients, &compare_client_fd_directly, &i),
                                 cb_msg_rcv);
 
                         if (!res)
@@ -226,11 +226,11 @@ void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,
 /* Gets called when client is authenticated as a user
  * will update the client's userID
  */
-void server_ch_user_authed(int id, SSL *ssl)
+void server_ch_client_authed(int id, SSL *ssl)
 {
     int fd = SSL_get_fd(ssl);
     struct server_client *sc = gdsl_rbtree_search(clients,
-            &compare_user_fd_directly, &fd);
+            &compare_client_fd_directly, &fd);
     if (sc != NULL)
         sc->id = id;
 }
@@ -290,7 +290,7 @@ static void show_certs(SSL *ssl)
         printf("No certificates.\n");
 }
 
-static void server_ch_user_connected(int fd, SSL *ssl, callback_cl_cntd_t cb_cl_cntd)
+static void server_ch_client_connected(int fd, SSL *ssl, callback_cl_cntd_t cb_cl_cntd)
 {
     int rc;
     struct server_client *sc = server_client_create(-1, ssl);
@@ -298,10 +298,10 @@ static void server_ch_user_connected(int fd, SSL *ssl, callback_cl_cntd_t cb_cl_
     cb_cl_cntd(sc);
 }
 
-static void server_ch_user_disconnected(int fd, callback_cl_dc cb_cl_dc)
+static void server_ch_client_disconnected(int fd, callback_cl_dc cb_cl_dc)
 {
     struct server_client *sc = gdsl_rbtree_search(clients,
-           &compare_user_fd_directly, &fd);
+           &compare_client_fd_directly, &fd);
     cb_cl_dc(sc);
     if (sc != NULL) {
         gdsl_rbtree_remove(clients, sc);
@@ -309,10 +309,10 @@ static void server_ch_user_disconnected(int fd, callback_cl_dc cb_cl_dc)
     }
 }
 
-void server_ch_disconnect_user(SSL *ssl, callback_cl_dc cb_cl_dc)
+void server_ch_disconnect_client(SSL *ssl, callback_cl_dc cb_cl_dc)
 {
     int i = SSL_get_fd(ssl);
-    server_ch_user_disconnected(i, cb_cl_dc);
+    server_ch_client_disconnected(i, cb_cl_dc);
 
     // clean up connection
     FD_CLR(i, &master);

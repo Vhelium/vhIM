@@ -7,6 +7,7 @@
 #define SQLV_WRONG_PASSWORD 3
 #define SQLV_CONNECTION_ERROR 4
 #define SQLV_USER_EXISTS 5
+#define SQLV_USER_ALREADY_LOGGED_IN 6
 
 void sql_ch_init();
 

@@ -1,4 +1,4 @@
-CC = gcc
+CC = clang
 CFLAGS_S = -Wall -g -pthreads -I/usr/include/gdsl -L/usr/lib -lgdsl -lssl -lcrypto -lmysqlclient -lpthread -lz -lm -lssl -lcrypto -ldl -I/usr/include/mysql -I/usr/include/mysql -Wno-unused-function
 CFLAGS_C = -Wall -g -pthreads -L/usr/lib -lssl -lcrypto -lpthread -lz -lm -lssl -lcrypto -ldl -lncurses -Wno-unused-function 
 
