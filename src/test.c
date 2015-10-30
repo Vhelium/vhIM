@@ -5,6 +5,24 @@
 #include <ncurses.h>
 #include "network/datapacket.h"
 #include <openssl/sha.h>
+#include "utility/vistack.h"
+
+static void test_stack()
+{
+    struct vistack *s = vistack_create();
+    vistack_push(s, 0);
+    vistack_push(s, 1);
+    vistack_push(s, 2);
+    vistack_push(s, 3);
+    vistack_pop(s);
+    vistack_push(s, 4);
+    int i = 5;
+    for (;i<100;++i)
+        vistack_push(s, i);
+    while (!vistack_is_empty(s)) {
+        printf("pop: %d\n", vistack_pop(s));
+    }
+}
 
 static void test_salt()
 {
@@ -114,5 +132,5 @@ static void test_sql()
 
 int main(void)
 {
-    test_salt();
+    test_stack();
 }

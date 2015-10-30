@@ -10,6 +10,8 @@
 #include "sql_ch.h"
 #include "../constants.h"
 #include "../utility/strings_helper.h"
+#include "../utility/vstack.h"
+#include "../server/server_user.h"
 
 struct sql_conection {
     char server[64];
@@ -28,7 +30,7 @@ void sql_ch_init()
     strcpy(sql_con.db, "vhIM");
 }
 
-int sql_check_user_auth(char *user, char *pw, int *result)
+int sql_ch_check_user_auth(char *user, char *pw, int *result)
 {
     MYSQL *con;
     MYSQL_RES *res;
@@ -136,7 +138,7 @@ int sql_ch_add_user(char *user, char *pw)
         }
     }
     else {
-        result = SQLV_USER_EXISTS;
+        result = SQLV_CONNECTION_ERROR;
         goto QUERY_FAIL;
     }
 
@@ -253,6 +255,361 @@ END:
     mysql_close(con);
 
     return r;
+}
+
+/* creates new friend request if it doesn't exist yet.
+ * One has to check first if users might already be friends. */
+int sql_ch_create_friend_request(int uid_from, int uid_to)
+{
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    /* check if there is already a friend request created */
+    sprintf(query, "SELECT EXISTS(SELECT 1 FROM `friend_requests` WHERE `friend_id1` = '%d' AND `friend_id2` = '%d')",
+            uid_from, uid_to);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    if ((row = mysql_fetch_row(res)) != NULL) {
+        if (row[0][0] == '1') {
+            result = SQLV_ENTRY_EXISTS;
+            goto QUERY_FAIL;
+        }
+    }
+    else {
+        result = SQLV_NOPE;
+        goto QUERY_FAIL;
+    }
+
+    mysql_free_result(res);
+
+    /* check if the other user already requested one previously */
+    sprintf(query, "SELECT EXISTS(SELECT 1 FROM `friend_requests` WHERE `friend_id1` = '%d' AND `friend_id2` = '%d')",
+            uid_to, uid_from);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    if ((row = mysql_fetch_row(res)) != NULL) {
+        if (row[0][0] == '1') {
+            debugv("fr: 1\n");
+            result = SQLV_OTHER_EXISTS;
+            goto QUERY_FAIL;
+        }
+    }
+    else {
+        result = SQLV_CONNECTION_ERROR;
+        goto QUERY_FAIL;
+    }
+
+QUERY_FAIL:
+    mysql_free_result(res);
+
+    if (result == SQLV_SUCCESS) { /* request doesn't exist and other user
+                                     hasn't requested previoysly */
+        //TODO: prevent slq injection
+        sprintf(query, "INSERT INTO `friend_requests` VALUES(DEFAULT, '%d', '%d')",
+                uid_from, uid_to);
+
+        if (mysql_query(con, query)) {
+            errv("%s\n", mysql_error(con));
+            result = SQLV_CONNECTION_ERROR;
+            goto END;
+        }
+    }
+    else
+        goto END;
+
+END:
+    mysql_close(con);
+
+    return result;
+}
+
+int sql_ch_get_friend_requests(int uid_from, struct vstack *requests_out)
+{
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    /* query for all pending friend requests */
+    sprintf(query, "SELECT friend_requests.friend_id1, users.user FROM `friend_requests` INNER JOIN `users` on users.id = friend_requests.friend_id1 WHERE friend_requests.friend_id2 = '%d'", uid_from);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    while ((row = mysql_fetch_row(res)) != NULL) {
+        char *uid_f2 = row[0];
+        // convert to int
+        int uid = atoi(uid_f2);
+        // fetch friend's user name
+        char *uname = row[1];
+        // save in a list
+        struct server_user_info *info = malloc(sizeof(struct server_user_info));
+        info->username = malloc(strlen(uname) + 1);
+        strcpy(info->username, uname);
+        info->id = uid;
+
+        vstack_push(requests_out, info);
+    }
+
+    mysql_free_result(res);
+
+END:
+    mysql_close(con);
+
+    return result;
+}
+
+/* creates two entries for friendship (in both directions)
+ * does NOT check for existing friendship! */
+int sql_ch_create_friends(int uid_1, int uid_2)
+{
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    /* perform two queries */
+
+    //TODO: prevent slq injection
+    sprintf(query, "INSERT INTO `friends` VALUES(DEFAULT, '%d', '%d')",
+            uid_1, uid_2);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    //TODO: prevent slq injection
+    sprintf(query, "INSERT INTO `friends` VALUES(DEFAULT, '%d', '%d')",
+            uid_2, uid_1);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    /* clean up pending friend requests */
+    sprintf(query, "DELETE FROM `friend_requests` WHERE (`friend_id1` = '%d' AND `friend_id2` = '%d') OR (`friend_id1` = '%d' AND `friend_id2` = '%d')",
+            uid_1, uid_2, uid_2, uid_1);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+END:
+    mysql_close(con);
+
+    return result;
+}
+
+bool sql_ch_are_friends(int uid_from, int uid_to)
+{
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    sprintf(query, "SELECT EXISTS(SELECT 1 FROM `friends` WHERE `friend_id1` = '%d' AND `friend_id2` = '%d')",
+            uid_from, uid_to);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    if ((row = mysql_fetch_row(res)) != NULL) {
+        if (row[0][0] == '1') {
+            result = SQLV_ENTRY_EXISTS;
+            goto QUERY_FAIL;
+        }
+    }
+    else {
+        result = SQLV_NOPE;
+        goto QUERY_FAIL;
+    }
+
+QUERY_FAIL:
+    mysql_free_result(res);
+
+END:
+    mysql_close(con);
+
+    return result == SQLV_ENTRY_EXISTS;
+}
+
+int sql_ch_get_friends(int uid_from, struct vstack *friends_out)
+{
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    /* retrieve all friends */
+    sprintf(query, "select friends.friend_id2, users.user from `friends` INNER JOIN `users` on users.id = friends.friend_id2 WHERE friends.friend_id1 = '%d'",
+            uid_from);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    while ((row = mysql_fetch_row(res)) != NULL) {
+        // fetch uid
+        char *uid_str = row[0];
+        // convert to int
+        int uid = atoi(uid_str);
+        // fetch friend's user name
+        char *uname = row[1];
+        // save in a list
+        struct server_user_info *info = malloc(sizeof(struct server_user_info));
+        info->username = malloc(strlen(uname) + 1);
+        strcpy(info->username, uname);
+        info->id = uid;
+
+        vstack_push(friends_out, info);
+    }
+
+    mysql_free_result(res);
+
+END:
+    mysql_close(con);
+
+    // return the list
+    return result;
+}
+
+int sql_ch_delete_friends(int uid_1, int uid_2)
+{
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    /* check if already friends */
+    sprintf(query, "SELECT EXISTS(SELECT 1 FROM `friends` WHERE `friend_id1` = '%d' AND `friend_id2` = '%d')",
+            uid_1, uid_2);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    if ((row = mysql_fetch_row(res)) != NULL) {
+        if (row[0][0] == '1') {
+            result = SQLV_ENTRY_EXISTS;
+        }
+        else
+            result = SQLV_SUCCESS;
+    }
+    else {
+        result = SQLV_CONNECTION_ERROR;
+    }
+
+    mysql_free_result(res);
+
+    if (result == SQLV_ENTRY_EXISTS) { /* 1 & 2 are friends */
+        // remove friend ship
+        sprintf(query, "DELETE FROM `friends` WHERE (`friend_id1` = '%d' AND `friend_id2` = '%d') OR (`friend_id1` = '%d' AND `friend_id2` = '%d')",
+                uid_1, uid_2, uid_2, uid_1);
+
+        if (mysql_query(con, query)) {
+            errv("%s\n", mysql_error(con));
+            result = SQLV_CONNECTION_ERROR;
+            goto END;
+        }
+    }
+    else if (result == SQLV_SUCCESS) {
+        // otherwise delete possible pending requests
+        sprintf(query, "DELETE FROM `friend_requests` WHERE (`friend_id1` = '%d' AND `friend_id2` = '%d') OR (`friend_id1` = '%d' AND `friend_id2` = '%d')",
+                uid_1, uid_2, uid_2, uid_1);
+
+        if (mysql_query(con, query)) {
+            errv("%s\n", mysql_error(con));
+            result = SQLV_CONNECTION_ERROR;
+            goto END;
+        }
+    }
+
+END:
+    mysql_close(con);
+
+    return result;
 }
 
 void sql_ch_destroy()

@@ -22,6 +22,9 @@ void datapacket_set_int(datapacket *dp, int i);
 void datapacket_set_long(datapacket *dp, long l);
 void datapacket_set_string(datapacket *dp, char *s);
 
+int datapacket_simulate_int(datapacket *dp);
+void datapacket_update_int(datapacket *dp, int index, int i);
+
 bool datapacket_get_bool(datapacket *dp);
 int datapacket_get_int(datapacket *dp);
 long datapacket_get_long(datapacket *dp);

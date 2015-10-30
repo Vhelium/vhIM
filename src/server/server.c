@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -16,6 +17,7 @@
 #include "../network/datapacket.h"
 #include "../network/messagetypes.h"
 #include "server_user.h"
+#include "../utility/vstack.h"
 
 #define PORT "55099"
 
@@ -39,6 +41,12 @@ static bool is_user_logged_in(char *uname);
 static struct server_user *authorize_client(SSL *ssl, char* username, char* pwd, int *res);
 
 static bool is_allowed(unsigned char priv, int cmd);
+
+// Friends
+static void send_friend_request(int uid_from, int uid_to);
+static void accept_friend_request(int uid_from, int uid_to);
+static void set_friends_online(int uid_from, datapacket *dp);
+static bool users_are_friends(int uid_from, int uid_to);
 
 // Message Passing
 static int send_to_client(SSL *ssl, datapacket *dp);
@@ -164,6 +172,14 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
         }
         break;
 
+        case MSG_FRIENDS: {
+                datapacket *answer = datapacket_create(MSG_FRIENDS);
+                set_friends_online(user->id, answer);
+
+                send_to_user(user, answer);
+        }
+        break;
+
         case MSG_LOGOUT: {
             printf("user logged out: %s\n", user->username);
             /* unauth' client */
@@ -190,6 +206,34 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
             int priv = datapacket_get_int(dp);
             int res = sql_ch_update_privileges(uid, priv);
             printf("Granting user with id=%d new privilege lvl: %d  (%d)\n", uid, priv, res);
+        }
+        break;
+
+        case MSG_ADD_FRIEND: {
+            int uid_target = datapacket_get_int(dp);
+            int uid_from = user->id;
+            printf("user %d wants to be friend with user %d\n", uid_from, uid_target);
+            if (!users_are_friends(uid_from, uid_target))
+                send_friend_request(uid_from, uid_target);
+            else
+                printf("already friends.\n");
+        }
+        break;
+
+        case MSG_REMOVE_FRIEND: {
+            int uid_target = datapacket_get_int(dp);
+            int uid_from = user->id;
+            printf("user %d unfriends user %d\n", uid_from, uid_target);
+            if (sql_ch_delete_friends(uid_from, uid_target) == SQLV_USER_EXISTS) {
+                // notify users about their loss (if online)
+                datapacket *answer1 = datapacket_create(MSG_REMOVE_FRIEND);
+                datapacket_set_int(answer1, uid_target);
+                send_to_user(get_user_by_id(uid_from), answer1);
+
+                datapacket *answer2 = datapacket_create(MSG_REMOVE_FRIEND);
+                datapacket_set_int(answer2, uid_from);
+                send_to_user(get_user_by_id(uid_target), answer2);
+            }
         }
         break;
 
@@ -379,7 +423,7 @@ static bool is_allowed(unsigned char priv, int cmd)
 static struct server_user *authorize_client(SSL *ssl, char *username, char* pwd, int *res)
 {
     struct server_user *user = NULL;
-    int uid = sql_check_user_auth(username, pwd, res);
+    int uid = sql_ch_check_user_auth(username, pwd, res);
     if (*res == SQLV_SUCCESS && uid != USER_ID_INVALID) {
         /* check if user already logged in on other machine */
         user = gdsl_rbtree_map_infix(users, &map_username, username);
@@ -403,11 +447,119 @@ static struct server_user *authorize_client(SSL *ssl, char *username, char* pwd,
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
+ * Friends                                                     *
+\* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+static void send_friend_request(int uid_from, int uid_to)
+{
+    struct server_user *tuser = get_user_by_id(uid_to);
+    if (tuser) {
+        // notify target user
+        datapacket *dp = datapacket_create(MSG_SYSTEM_MSG);
+        datapacket_set_string(dp, "Friend request received.");
+        send_to_user(tuser, dp);
+        // create db entry for request
+        int res = sql_ch_create_friend_request(uid_from, uid_to);
+        if (res == SQLV_OTHER_EXISTS) {
+            /* other user already requested a friendship
+             * ==> auto-accept */
+            printf("auto accepting friend request.\n");
+            sql_ch_create_friends(uid_from, uid_to); 
+        }
+        printf("freq code: %d\n", res);
+    }
+    else {
+        //TODO: tell user it was an invalid name
+        datapacket *dp = datapacket_create(MSG_SYSTEM_MSG);
+        datapacket_set_string(dp, "User not found.");
+        send_to_user(tuser, dp);
+    }
+}
+
+/* not used - instead just send a friend_request for auto-accept */
+static void accept_friend_request(int uid_from, int uid_to)
+{
+   sql_ch_create_friends(uid_from, uid_to); 
+}
+
+static void set_friends_online(int uid_from, datapacket *dp)
+{
+    // on = #friends online
+    // off = #friends offline
+    struct vstack *friends, *off, *on, *requests;
+    friends = vstack_create();
+    off = vstack_create();
+    on = vstack_create();
+    requests = vstack_create();
+    // retrieve list of friends from sql_ch
+    sql_ch_get_friends(uid_from, friends);
+    // loop list and see who is online/offline
+    while (!vstack_is_empty(friends)) {
+        struct server_user_info *info = (struct server_user_info *)vstack_pop(friends);
+        struct server_user *u = get_user_by_id(info->id);
+        if (u != NULL) {
+            vstack_push(on, info);
+        }
+        else {
+            vstack_push(off, info);
+        }
+    }
+    // fill datapacket correspondingly
+    size_t on_len = vstack_get_size(on);
+    datapacket_set_int(dp, on_len);
+    int i;
+    for (i = 0; i < on_len; ++i) {
+        struct server_user_info *info = vstack_pop(on);
+        datapacket_set_int(dp, info->id);
+        datapacket_set_string(dp, info->username);
+        free(info->username);
+        free(info);
+    }
+
+    size_t off_len = vstack_get_size(off);
+    datapacket_set_int(dp, off_len);
+    for(i = 0; i < off_len; ++i) {
+        struct server_user_info *info = vstack_pop(off);
+        datapacket_set_int(dp, info->id);
+        datapacket_set_string(dp, info->username);
+        free(info->username);
+        free(info);
+    }
+    
+    // retrieve list of pending friend requests
+    sql_ch_get_friend_requests(uid_from, requests);
+    // set size of pending requests
+    datapacket_set_int(dp, vstack_get_size(requests));
+    // loop list and see who is in it
+    while (!vstack_is_empty(requests)) {
+        struct server_user_info *info = (struct server_user_info *)vstack_pop(requests);
+        datapacket_set_int(dp, info->id);
+        datapacket_set_string(dp, info->username);
+        free(info->username);
+        free(info);
+    }
+
+    vstack_destroy(friends);
+    vstack_destroy(off);
+    vstack_destroy(on);
+    vstack_destroy(requests);
+}
+
+static bool users_are_friends(int uid_from, int uid_to)
+{
+    return sql_ch_are_friends(uid_from, uid_to);
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
  * Message Passing                                             *
 \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 static int send_to_client(SSL *ssl, datapacket *dp)
 {
+    if (ssl == NULL) {
+        datapacket_destroy(dp);
+        return 2;
+    }
     size_t s = datapacket_finish(dp);
     server_ch_send(ssl, dp->data, s);
     datapacket_destroy(dp);
@@ -417,6 +569,10 @@ static int send_to_client(SSL *ssl, datapacket *dp)
 
 static int send_to_user(struct server_user *u_to, datapacket *dp)
 {
+    if (u_to == NULL) {
+        datapacket_destroy(dp);
+        return 2;
+    }
     size_t s = datapacket_finish(dp);
     struct server_user_connection *p = u_to->connections;
     while (p) {
@@ -506,7 +662,7 @@ static size_t get_user_count()
 static int map_write_usernames(const gdsl_element_t e, gdsl_location_t l, void *ud)
 {
     struct server_user *user = (struct server_user *)e;
-    char *ustr = malloc(sizeof(user->username + 64)); /* space for digits */
+    char *ustr = malloc(sizeof(user->username) + 64); /* space for digits */
     sprintf(ustr, "%s(%d)", user->username, user->id);
 
     datapacket_set_string((datapacket *)ud, ustr);

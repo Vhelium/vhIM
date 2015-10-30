@@ -63,6 +63,25 @@ void datapacket_set_int(datapacket *dp, int i)
     dp->index += sizeof(int);
 }
 
+int datapacket_simulate_int(datapacket *dp)
+{
+    datapacket_verify_size(dp, sizeof(int));
+    dp->index += sizeof(int);
+    return dp->index - sizeof(int);
+}
+
+void datapacket_update_int(datapacket *dp, int index, int i)
+{
+    if (index >= 0 && index < dp->index) {
+        byte ba[sizeof(int)];
+        bc_from_int(ba, i);
+
+        memcpy(dp->data + index, ba, sizeof(int));    // copy new data
+
+        dp->index += sizeof(int);
+    }
+}
+
 void datapacket_set_long(datapacket *dp, long l)
 {
 

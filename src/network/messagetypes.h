@@ -13,11 +13,16 @@
 #define MSG_WHO 0xb
 #define MSG_DISCONNECT 0xc
 #define MSG_GRANT_PRIVILEGES 0xd
+#define MSG_ADD_FRIEND 0xe
+#define MSG_SYSTEM_MSG 0xf
+#define MSG_FRIENDS 0x10
+#define MSG_REMOVE_FRIEND 0x11
 
 #define MSG_CMD_KICK_ID 1001
 
 #define CMD_CONNECT 2001
 #define CMD_DISCONNECT 2002
 #define CMD_HELP 2003
+#define CMD_INVALID 2004
 
 #endif

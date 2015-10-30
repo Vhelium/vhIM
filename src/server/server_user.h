@@ -9,6 +9,12 @@ struct server_user_connection
     struct server_user_connection *next;
 };
 
+struct server_user_info
+{
+    int id;
+    char *username;
+};
+
 struct server_user
 {
     int id;

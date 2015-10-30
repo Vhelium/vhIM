@@ -9,7 +9,7 @@
 
 int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
 {
-    int ret = 0;
+    int ret = -1;
     char *cmd = input_buffer + 1;
     char *type = NULL;
     next_word(&cmd, &type);
@@ -84,6 +84,10 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
     else if (strcmp(type, "who") == 0) {
         exec_cmd(MSG_WHO, NULL);
     }
+    /* friends*/
+    else if (strcmp(type, "friends") == 0) {
+        exec_cmd(MSG_FRIENDS, NULL);
+    }
     /* help */
     else if (strcmp(type, "help") == 0) {
         exec_cmd(CMD_HELP, NULL);
@@ -121,6 +125,34 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
             ret = 2;
         free (uid);
     }
+    /* friend add */
+    else if (strcmp(type, "fadd") == 0) {
+        char *user = NULL;
+        if (next_word(&cmd, &user)) {
+            char *a[] = {user};
+            exec_cmd(MSG_ADD_FRIEND, a);
+        }
+        else
+            ret = 2;
+        free(user);
+    }
+    /* friend remove */
+    else if (strcmp(type, "fremove") == 0) {
+        char *user = NULL;
+        if (next_word(&cmd, &user)) {
+            char *a[] = {user};
+            exec_cmd(MSG_REMOVE_FRIEND, a);
+        }
+        else
+            ret = 2;
+        free(user);
+    }
+    /* invalid command */
+    else
+        ret = 2;
+
+    if (ret == 2)
+        exec_cmd(CMD_INVALID, NULL);
     
     free(type);
 

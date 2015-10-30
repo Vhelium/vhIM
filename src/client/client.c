@@ -78,6 +78,13 @@ static void process_packet(void *sender, byte *data)
         }
         break;
 
+        case MSG_SYSTEM_MSG: {
+            char *msg = datapacket_get_string(dp);
+            printf("[SERVER]: %s\n", msg);
+            free(msg);
+        }
+        break;
+
         case MSG_REGISTR_SUCCESSFUL: {
             char *msg = datapacket_get_string(dp);
             printf("%s\n", msg);
@@ -101,6 +108,38 @@ static void process_packet(void *sender, byte *data)
                 free(u);
             }
             printf("\n\n");
+        }
+        break;
+
+        case MSG_FRIENDS: {
+            int i, req_len, off_len, on_len = datapacket_get_int(dp);
+            printf("Friends online: %d\n", on_len);
+            for (i=0; i<on_len; ++i) {
+                int uid = datapacket_get_int(dp);
+                char *u = datapacket_get_string(dp);
+                printf("    %s(%d)\n", u, uid);
+                free(u);
+            }
+            printf("\n\n");
+            
+            off_len = datapacket_get_int(dp);
+            printf("Friends offline: %d\n", off_len);
+            for (i=0; i<off_len; ++i) {
+                int uid = datapacket_get_int(dp);
+                char *u = datapacket_get_string(dp);
+                printf("    %s(%d)\n", u, uid);
+                free(u);
+            }
+            printf("\n\n");
+
+            req_len = datapacket_get_int(dp);
+            printf("Pending friend requests: %d\n", req_len);
+            for (i=0; i<req_len; ++i) {
+                int uid = datapacket_get_int(dp);
+                char *u = datapacket_get_string(dp);
+                printf("    %s(%d)\n", u, uid);
+                free(u);
+            }
         }
         break;
 
@@ -168,6 +207,12 @@ static int execute_command(int type, char *argv[])
         }
         break;
 
+        case MSG_FRIENDS: {
+            datapacket *dp = datapacket_create(MSG_FRIENDS);
+            send_to_server(dp);
+        }
+        break;
+
         case CMD_CONNECT: {
             /* check if passed argument is a number */
             if (argv[1] != NULL && !is_decimal_number(argv[1]))
@@ -197,13 +242,31 @@ static int execute_command(int type, char *argv[])
         }
         break;
 
+        case MSG_ADD_FRIEND: {
+            if (is_decimal_number(argv[0])) {
+                datapacket *dp = datapacket_create(MSG_ADD_FRIEND);
+                datapacket_set_int(dp, atoi(argv[0]));
+                send_to_server(dp);
+            }
+        }
+        break;
+ 
+        case MSG_REMOVE_FRIEND: {
+            if (is_decimal_number(argv[0])) {
+                datapacket *dp = datapacket_create(MSG_REMOVE_FRIEND);
+                datapacket_set_int(dp, atoi(argv[0]));
+                send_to_server(dp);
+            }
+        }
+        break;
+
         case CMD_HELP: {
             printf("Go fuck yourself.\n");
         }
         break;
 
         default:
-            printf("Invalid command: %d", type);
+            printf("Invalid command\n");
             return 1;
     }
 
