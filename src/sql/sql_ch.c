@@ -648,7 +648,6 @@ bool sql_ch_user_exists(int uid)
         result = SQLV_NOPE;
     }
 
-QUERY_FAIL:
     mysql_free_result(res);
 
 END:

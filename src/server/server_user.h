@@ -18,6 +18,7 @@ struct server_user_info
 struct server_user
 {
     int id;
+    size_t con_len;
     struct server_user_connection *connections;
     char *username;
     unsigned char p_level;

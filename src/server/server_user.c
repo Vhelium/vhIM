@@ -10,6 +10,7 @@ struct server_user *server_user_create(int id, SSL *ssl, char *username,
 {
     struct server_user *user = malloc(sizeof(struct server_user));
     user->id = id;
+    user->con_len = 1;
     user->connections = malloc(sizeof(struct server_user_connection));
     user->connections->ssl = ssl;
     user->connections->next = NULL;
@@ -45,6 +46,7 @@ void server_user_add_connection(struct server_user *su, SSL *ssl)
     /* append to linked list */
     co->next = su->connections;
     su->connections = co;
+    su->con_len++;
 }
 
 void server_user_remove_connection(struct server_user *su, SSL *ssl)
@@ -61,5 +63,7 @@ void server_user_remove_connection(struct server_user *su, SSL *ssl)
             prev->next = cur->next;
         /* free removed struct */
         free(cur);
+        /* decrease connection count */
+        su->con_len--;
     }
 }

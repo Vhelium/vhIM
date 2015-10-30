@@ -17,6 +17,7 @@
 #define MSG_SYSTEM_MSG 0xf
 #define MSG_FRIENDS 0x10
 #define MSG_REMOVE_FRIEND 0x11
+#define MSG_FRIEND_ONLINE 0x12
 
 #define MSG_CMD_KICK_ID 1001
 

@@ -149,6 +149,14 @@ static void process_packet(void *sender, byte *data)
         }
         break;
 
+        case MSG_FRIEND_ONLINE: {
+            int f = datapacket_get_int(dp);
+            char *uname = datapacket_get_string(dp);
+            printf("Friend came online: %s(%d)\n", uname, f);
+            free(uname);
+        }
+        break;
+
         default:
             errv("Unknown packet: %d\n", packet_type);
             break;

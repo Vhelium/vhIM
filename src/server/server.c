@@ -51,6 +51,7 @@ static bool users_are_friends(int uid_from, int uid_to);
 // Message Passing
 static int send_to_client(SSL *ssl, datapacket *dp);
 static int send_to_user(struct server_user *u_to, datapacket *dp);
+static int send_to_friends(struct server_user *u_from, datapacket *dp);
 static int send_to_all(SSL *ssl_from, datapacket *dp);
 
 // compare [server_user] with [server_user]
@@ -262,9 +263,19 @@ static void handle_packet_unauth(SSL *ssl, datapacket *dp)
                 if (res != SQLV_USER_ALREADY_LOGGED_IN)
                     add_server_user(user);
 
+                /* Welcome message */
                 datapacket *answer = datapacket_create(MSG_WELCOME);
                 datapacket_set_string(answer, uname);
                 send_to_client(ssl, answer);
+
+                printf("#con: %lu\n", user->con_len);
+                if (user->con_len == 1) { /* just came online */
+                    /* inform friends */
+                    datapacket *on = datapacket_create(MSG_FRIEND_ONLINE);
+                    datapacket_set_int(on, user->id);
+                    datapacket_set_string(on, user->username);
+                    send_to_friends(user, on);
+                }
             }
             else {
                 datapacket *answer = datapacket_create(MSG_AUTH_FAILED);
@@ -568,6 +579,19 @@ static int send_to_client(SSL *ssl, datapacket *dp)
     return 0;
 }
 
+static int send_data_to_user(struct server_user *u_to, byte *data, size_t s)
+{
+    if (u_to == NULL)
+        return 2;
+
+    struct server_user_connection *p = u_to->connections;
+    while (p) {
+        server_ch_send(p->ssl, data, s);
+        p = p->next;
+    }
+    return 0;
+}
+
 static int send_to_user(struct server_user *u_to, datapacket *dp)
 {
     if (u_to == NULL) {
@@ -575,13 +599,37 @@ static int send_to_user(struct server_user *u_to, datapacket *dp)
         return 2;
     }
     size_t s = datapacket_finish(dp);
-    struct server_user_connection *p = u_to->connections;
-    while (p) {
-        server_ch_send(p->ssl, dp->data, s);
-        p = p->next;
-    }
+    send_data_to_user(u_to, dp->data, s);
     datapacket_destroy(dp);
 
+    return 0;
+}
+
+static int send_to_friends(struct server_user *u_from, datapacket *dp)
+{
+    printf("sending to friends..\n");
+    size_t s = datapacket_finish(dp);
+
+    struct vstack *friends;
+    friends = vstack_create();
+    // retrieve list of friends from sql_ch
+    sql_ch_get_friends(u_from->id, friends);
+    // loop list and see who is online/offline
+    while (!vstack_is_empty(friends)) {
+        printf("got one..\n");
+        struct server_user_info *info = (struct server_user_info *)vstack_pop(friends);
+        struct server_user *u = get_user_by_id(info->id);
+        if (u != NULL) {
+            send_data_to_user(u, dp->data, s);
+            printf("sent..\n");
+        }
+        free(info->username);
+        free(info);
+    }
+    /* clean up */
+    vstack_destroy(friends);
+
+    datapacket_destroy(dp);
     return 0;
 }
 
