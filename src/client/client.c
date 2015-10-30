@@ -143,6 +143,12 @@ static void process_packet(void *sender, byte *data)
         }
         break;
 
+        case MSG_REMOVE_FRIEND: {
+            int f = datapacket_get_int(dp);
+            printf("Friend removed: %d\n", f);
+        }
+        break;
+
         default:
             errv("Unknown packet: %d\n", packet_type);
             break;

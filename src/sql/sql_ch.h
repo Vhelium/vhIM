@@ -149,6 +149,8 @@ int sql_ch_get_friends(int uid_from, struct vstack *friends_out);
  */
 int sql_ch_delete_friends(int uid_1, int uid_2);
 
+bool sql_ch_user_exists(int uid);
+
 void sql_ch_destroy();
 
 #endif

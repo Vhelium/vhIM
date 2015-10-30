@@ -612,6 +612,51 @@ END:
     return result;
 }
 
+bool sql_ch_user_exists(int uid)
+{
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    sprintf(query, "SELECT EXISTS(SELECT 1 FROM `users` WHERE `id` = '%d')", uid);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    if ((row = mysql_fetch_row(res)) != NULL) {
+        if (row[0][0] == '1') {
+            result = SQLV_ENTRY_EXISTS;
+        }
+        else {
+            result = SQLV_NOPE;
+        }
+    }
+    else {
+        result = SQLV_NOPE;
+    }
+
+QUERY_FAIL:
+    mysql_free_result(res);
+
+END:
+    mysql_close(con);
+
+    return result == SQLV_ENTRY_EXISTS;
+}
+
 void sql_ch_destroy()
 {
     // nothing to do

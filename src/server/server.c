@@ -452,8 +452,9 @@ static struct server_user *authorize_client(SSL *ssl, char *username, char* pwd,
 
 static void send_friend_request(int uid_from, int uid_to)
 {
-    struct server_user *tuser = get_user_by_id(uid_to);
-    if (tuser) {
+    // check if user exists
+    if (sql_ch_user_exists(uid_to)) {
+        struct server_user *tuser = get_user_by_id(uid_to);
         // notify target user
         datapacket *dp = datapacket_create(MSG_SYSTEM_MSG);
         datapacket_set_string(dp, "Friend request received.");
@@ -469,10 +470,10 @@ static void send_friend_request(int uid_from, int uid_to)
         printf("freq code: %d\n", res);
     }
     else {
-        //TODO: tell user it was an invalid name
+        // tell user it was an invalid name
         datapacket *dp = datapacket_create(MSG_SYSTEM_MSG);
         datapacket_set_string(dp, "User not found.");
-        send_to_user(tuser, dp);
+        send_to_user(get_user_by_id(uid_from), dp);
     }
 }
 

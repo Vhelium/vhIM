@@ -7,7 +7,7 @@
 
 typedef unsigned char byte;
 
-#define DEBUG 1
+#define DEBUG 2
 
 #define debugv(fmt, ...) \
     do { if (DEBUG) fprintf(stderr, "[DD] %s:%d:%s():  " fmt, __FILE__, \
