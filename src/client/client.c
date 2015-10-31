@@ -48,9 +48,9 @@ static void process_packet(void *sender, byte *data)
             char *msg = datapacket_get_string(dp);
             printf("[INFO]: Server welcomes you: %s\n", msg);
 
-            datapacket *answer = datapacket_create(MSG_BROADCAST);
-            datapacket_set_string(answer, "Hi all. I'm Auth'ed :)");
-            send_to_server(answer);
+//            datapacket *answer = datapacket_create(MSG_BROADCAST);
+//            datapacket_set_string(answer, "Hi all. I'm Auth'ed :)");
+//            send_to_server(answer);
 
             free(msg);
         }
@@ -154,6 +154,12 @@ static void process_packet(void *sender, byte *data)
             char *uname = datapacket_get_string(dp);
             printf("Friend came online: %s(%d)\n", uname, f);
             free(uname);
+        }
+        break;
+
+        case MSG_FRIEND_OFFLINE: {
+            int f = datapacket_get_int(dp);
+            printf("Friend with id %d went offline.\n", f);
         }
         break;
 

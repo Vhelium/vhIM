@@ -190,8 +190,15 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
             server_user_remove_connection(user, ssl);
 
             /* if no connections left, remove user from datastructure */
-            if (user->connections == NULL)
+            if (user->connections == NULL) {
+                /* inform friends */
+                datapacket *off = datapacket_create(MSG_FRIEND_OFFLINE);
+                datapacket_set_int(off, user->id);
+                send_to_friends(user, off);
+
+                /* remove user */
                 remove_server_user_by_struct(user);
+            }
         }
         break;
 
@@ -206,7 +213,8 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
             int uid = datapacket_get_int(dp);
             int priv = datapacket_get_int(dp);
             int res = sql_ch_update_privileges(uid, priv);
-            printf("Granting user with id=%d new privilege lvl: %d  (%d)\n", uid, priv, res);
+            printf("Granting user with id=%d new privilege lvl: %d  (%d)\n",
+                    uid, priv, res);
         }
         break;
 
@@ -268,7 +276,6 @@ static void handle_packet_unauth(SSL *ssl, datapacket *dp)
                 datapacket_set_string(answer, uname);
                 send_to_client(ssl, answer);
 
-                printf("#con: %lu\n", user->con_len);
                 if (user->con_len == 1) { /* just came online */
                     /* inform friends */
                     datapacket *on = datapacket_create(MSG_FRIEND_ONLINE);
@@ -387,8 +394,15 @@ static void cb_cl_dc(struct server_client *sc)
             server_user_remove_connection(user, sc->ssl);
 
             /* if no connections left, remove user from datastructure */
-            if (user->connections == NULL)
+            if (user->connections == NULL) {
+                /* inform friends */
+                datapacket *off = datapacket_create(MSG_FRIEND_OFFLINE);
+                datapacket_set_int(off, user->id);
+                send_to_friends(user, off);
+
+                /* remove user */
                 remove_server_user_by_struct(user);
+            }
         }
         else {
             perror("dc: auth'ed client not in users list");
@@ -607,7 +621,6 @@ static int send_to_user(struct server_user *u_to, datapacket *dp)
 
 static int send_to_friends(struct server_user *u_from, datapacket *dp)
 {
-    printf("sending to friends..\n");
     size_t s = datapacket_finish(dp);
 
     struct vstack *friends;
@@ -616,12 +629,10 @@ static int send_to_friends(struct server_user *u_from, datapacket *dp)
     sql_ch_get_friends(u_from->id, friends);
     // loop list and see who is online/offline
     while (!vstack_is_empty(friends)) {
-        printf("got one..\n");
         struct server_user_info *info = (struct server_user_info *)vstack_pop(friends);
         struct server_user *u = get_user_by_id(info->id);
         if (u != NULL) {
             send_data_to_user(u, dp->data, s);
-            printf("sent..\n");
         }
         free(info->username);
         free(info);

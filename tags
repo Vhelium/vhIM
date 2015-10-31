@@ -7,10 +7,10 @@
 BYTECONVERTER_H	src/network/byteconverter.h	2;"	d
 BYTEPROCESSOR_H	src/network/byteprocessor.h	2;"	d
 CLIENT_CH_H	src/client/client_ch.h	2;"	d
-CMD_CONNECT	src/network/messagetypes.h	24;"	d
-CMD_DISCONNECT	src/network/messagetypes.h	25;"	d
-CMD_HELP	src/network/messagetypes.h	26;"	d
-CMD_INVALID	src/network/messagetypes.h	27;"	d
+CMD_CONNECT	src/network/messagetypes.h	25;"	d
+CMD_DISCONNECT	src/network/messagetypes.h	26;"	d
+CMD_HELP	src/network/messagetypes.h	27;"	d
+CMD_INVALID	src/network/messagetypes.h	28;"	d
 COMMAND_PARSER_H	src/utility/command_parser.h	2;"	d
 CONSTANTS_H	src/constants.h	2;"	d
 DATAPACKET_H	src/network/datapacket.h	2;"	d
@@ -20,9 +20,10 @@ MESSAGETYPES_H	src/network/messagetypes.h	2;"	d
 MSG_ADD_FRIEND	src/network/messagetypes.h	16;"	d
 MSG_AUTH_FAILED	src/network/messagetypes.h	7;"	d
 MSG_BROADCAST	src/network/messagetypes.h	8;"	d
-MSG_CMD_KICK_ID	src/network/messagetypes.h	22;"	d
+MSG_CMD_KICK_ID	src/network/messagetypes.h	23;"	d
 MSG_DISCONNECT	src/network/messagetypes.h	14;"	d
 MSG_FRIENDS	src/network/messagetypes.h	18;"	d
+MSG_FRIEND_OFFLINE	src/network/messagetypes.h	21;"	d
 MSG_FRIEND_ONLINE	src/network/messagetypes.h	20;"	d
 MSG_GRANT_PRIVILEGES	src/network/messagetypes.h	15;"	d
 MSG_LOGOUT	src/network/messagetypes.h	12;"	d
@@ -67,8 +68,8 @@ bc_to_bool	src/network/byteconverter.c	/^bool bc_to_bool(byte *data)$/;"	f
 bc_to_int	src/network/byteconverter.c	/^int bc_to_int(byte *data)$/;"	f
 bp_process_data	src/network/byteprocessor.c	/^int bp_process_data(byte *data, ssize_t data_len, byte *rest_buffer,$/;"	f
 buf_size	src/network/datapacket.h	/^    size_t buf_size; \/\/ current buffer size, in bytes$/;"	m	struct:__anon1
-byte	src/constants.h	/^typedef unsigned char byte;$/;"	t
 bytes_to_string	src/utility/strings_helper.c	/^void bytes_to_string(const char *in, int in_len, char *out)$/;"	f
+byte	src/constants.h	/^typedef unsigned char byte;$/;"	t
 callback_cl_cntd_t	src/server/server_ch.h	/^typedef void (*callback_cl_cntd_t)(struct server_client *su);$/;"	t
 callback_cl_dc	src/server/server_ch.h	/^typedef void (*callback_cl_dc)(struct server_client *su);$/;"	t
 callback_msg_rcv_t	src/network/byteprocessor.h	/^typedef void (*callback_msg_rcv_t)(void *sender, byte *data);$/;"	t
@@ -82,19 +83,19 @@ client_ch_start	src/client/client_ch.c	/^int client_ch_start(char *host, int por
 client_connect	src/client/client.c	/^static int client_connect(char *host, int port)$/;"	f	file:
 client_disconnect	src/client/client.c	/^static int client_disconnect()$/;"	f	file:
 clients	src/server/server_ch.c	/^static gdsl_rbtree_t clients; \/\/ list of all connected clients$/;"	v	file:
-compare_client_fd	src/server/server_ch.c	/^static long int compare_client_fd(const gdsl_element_t E, void *VALUE)$/;"	f	file:
 compare_client_fd_directly	src/server/server_ch.c	/^static long int compare_client_fd_directly(const gdsl_element_t E, void *VALUE)$/;"	f	file:
-compare_user_id	src/server/server.c	/^static long int compare_user_id(const gdsl_element_t E, void *VALUE)$/;"	f	file:
+compare_client_fd	src/server/server_ch.c	/^static long int compare_client_fd(const gdsl_element_t E, void *VALUE)$/;"	f	file:
 compare_user_id_directly	src/server/server.c	/^static long int compare_user_id_directly(const gdsl_element_t E, void *VALUE)$/;"	f	file:
+compare_user_id	src/server/server.c	/^static long int compare_user_id(const gdsl_element_t E, void *VALUE)$/;"	f	file:
+con_len	src/server/server_user.h	/^    size_t con_len;$/;"	m	struct:server_user
 connections	src/server/server_user.h	/^    struct server_user_connection *connections;$/;"	m	struct:server_user	typeref:struct:server_user::server_user_connection
 ctx	src/client/client_ch.c	/^SSL_CTX *ctx;$/;"	v
 ctx	src/server/server_ch.c	/^static SSL_CTX *ctx;$/;"	v	file:
+data_len	src/server/server.c	/^        size_t data_len;$/;"	m	struct:sender_triplet	file:
 data	src/network/datapacket.h	/^    byte *data;$/;"	m	struct:__anon1
 data	src/server/server.c	/^        void *data;$/;"	m	struct:sender_triplet	file:
-data_len	src/server/server.c	/^        size_t data_len;$/;"	m	struct:sender_triplet	file:
-datapacket	src/network/datapacket.h	/^} datapacket;$/;"	t	typeref:struct:__anon1
-datapacket_create	src/network/datapacket.c	/^datapacket *datapacket_create(int type)$/;"	f
 datapacket_create_from_data	src/network/datapacket.c	/^datapacket *datapacket_create_from_data(byte *data)$/;"	f
+datapacket_create	src/network/datapacket.c	/^datapacket *datapacket_create(int type)$/;"	f
 datapacket_destroy	src/network/datapacket.c	/^void datapacket_destroy(datapacket *dp)$/;"	f
 datapacket_dump	src/network/datapacket.c	/^void datapacket_dump(datapacket *dp)$/;"	f
 datapacket_finish	src/network/datapacket.c	/^int datapacket_finish(datapacket *dp)$/;"	f
@@ -110,6 +111,7 @@ datapacket_set_string	src/network/datapacket.c	/^void datapacket_set_string(data
 datapacket_simulate_int	src/network/datapacket.c	/^int datapacket_simulate_int(datapacket *dp)$/;"	f
 datapacket_update_int	src/network/datapacket.c	/^void datapacket_update_int(datapacket *dp, int index, int i)$/;"	f
 datapacket_verify_size	src/network/datapacket.c	/^static void datapacket_verify_size(datapacket *dp, size_t additional)$/;"	f	file:
+datapacket	src/network/datapacket.h	/^} datapacket;$/;"	t	typeref:struct:__anon1
 db	src/sql/sql_ch.c	/^    char db[64];$/;"	m	struct:sql_conection	file:
 debugv	src/constants.h	12;"	d
 errv	src/constants.h	16;"	d
@@ -147,8 +149,8 @@ master	src/server/server_ch.c	/^static fd_set master;$/;"	v	file:
 max_len	src/utility/vistack.h	/^    size_t max_len;$/;"	m	struct:vistack
 max_len	src/utility/vstack.h	/^    size_t max_len;$/;"	m	struct:vstack
 mutex_connected	src/client/client.c	/^static pthread_mutex_t mutex_connected;$/;"	v	file:
-next	src/server/server_user.h	/^    struct server_user_connection *next;$/;"	m	struct:server_user_connection	typeref:struct:server_user_connection::server_user_connection
 next_word	src/utility/strings_helper.c	/^int next_word(char **in, char **out)$/;"	f
+next	src/server/server_user.h	/^    struct server_user_connection *next;$/;"	m	struct:server_user_connection	typeref:struct:server_user_connection::server_user_connection
 p_level	src/server/server_user.h	/^    unsigned char p_level;$/;"	m	struct:server_user
 process_command	src/utility/command_parser.c	/^int process_command(char *input_buffer, int (*exec_cmd)(int, char**))$/;"	f
 process_input	src/client/client.c	/^void *process_input()$/;"	f
@@ -170,8 +172,6 @@ send_to_server	src/client/client.c	/^static int send_to_server(datapacket *dp)$/
 send_to_user	src/server/server.c	/^static int send_to_user(struct server_user *u_to, datapacket *dp)$/;"	f	file:
 sender_triplet	src/server/server.c	/^struct sender_triplet {$/;"	s	file:
 serv_addr	src/client/client_ch.c	/^static struct sockaddr_in serv_addr;$/;"	v	typeref:struct:sockaddr_in	file:
-server	src/client/client_ch.c	/^static struct hostent *server;$/;"	v	typeref:struct:hostent	file:
-server	src/sql/sql_ch.c	/^    char server[64];$/;"	m	struct:sql_conection	file:
 server_ch_client_authed	src/server/server_ch.c	/^void server_ch_client_authed(int id, SSL *ssl)$/;"	f
 server_ch_client_connected	src/server/server_ch.c	/^static void server_ch_client_connected(int fd, SSL *ssl, callback_cl_cntd_t cb_cl_cntd)$/;"	f	file:
 server_ch_client_disconnected	src/server/server_ch.c	/^static void server_ch_client_disconnected(int fd, callback_cl_dc cb_cl_dc)$/;"	f	file:
@@ -180,17 +180,19 @@ server_ch_disconnect_client	src/server/server_ch.c	/^void server_ch_disconnect_c
 server_ch_listen	src/server/server_ch.c	/^void server_ch_listen(callback_cl_cntd_t cb_cl_cntd,$/;"	f
 server_ch_send	src/server/server_ch.c	/^void server_ch_send(SSL *ssl, byte *data, size_t data_len)$/;"	f
 server_ch_start	src/server/server_ch.c	/^int server_ch_start(char *port)$/;"	f
-server_client	src/server/server_client.h	/^struct server_client$/;"	s
 server_client_create	src/server/server_client.c	/^struct server_client *server_client_create(int id, SSL *ssl)$/;"	f
 server_client_destroy	src/server/server_client.c	/^void server_client_destroy(struct server_client *sc)$/;"	f
+server_client	src/server/server_client.h	/^struct server_client$/;"	s
 server_init	src/server/server.c	/^static void server_init()$/;"	f	file:
-server_user	src/server/server_user.h	/^struct server_user$/;"	s
 server_user_add_connection	src/server/server_user.c	/^void server_user_add_connection(struct server_user *su, SSL *ssl)$/;"	f
 server_user_connection	src/server/server_user.h	/^struct server_user_connection$/;"	s
 server_user_create	src/server/server_user.c	/^struct server_user *server_user_create(int id, SSL *ssl, char *username,$/;"	f
 server_user_destroy	src/server/server_user.c	/^void server_user_destroy(struct server_user *su)$/;"	f
 server_user_info	src/server/server_user.h	/^struct server_user_info$/;"	s
 server_user_remove_connection	src/server/server_user.c	/^void server_user_remove_connection(struct server_user *su, SSL *ssl)$/;"	f
+server_user	src/server/server_user.h	/^struct server_user$/;"	s
+server	src/sql/sql_ch.c	/^    char server[64];$/;"	m	struct:sql_conection	file:
+server	src/client/client_ch.c	/^static struct hostent *server;$/;"	v	typeref:struct:hostent	file:
 set_friends_online	src/server/server.c	/^static void set_friends_online(int uid_from, datapacket *dp)$/;"	f	file:
 set_is_connected_synced	src/client/client.c	/^static void set_is_connected_synced(bool b)$/;"	f	file:
 show_certs	src/client/client_ch.c	/^void show_certs(SSL* ssl)$/;"	f
@@ -209,12 +211,12 @@ sql_ch_init	src/sql/sql_ch.c	/^void sql_ch_init()$/;"	f
 sql_ch_load_privileges	src/sql/sql_ch.c	/^unsigned char sql_ch_load_privileges(int uid)$/;"	f
 sql_ch_update_privileges	src/sql/sql_ch.c	/^int sql_ch_update_privileges(int uid, unsigned char p)$/;"	f
 sql_ch_user_exists	src/sql/sql_ch.c	/^bool sql_ch_user_exists(int uid)$/;"	f
-sql_con	src/sql/sql_ch.c	/^} sql_con;$/;"	v	typeref:struct:sql_conection
 sql_conection	src/sql/sql_ch.c	/^struct sql_conection {$/;"	s	file:
-ssl	src/client/client_ch.c	/^SSL *ssl;$/;"	v
+sql_con	src/sql/sql_ch.c	/^} sql_con;$/;"	v	typeref:struct:sql_conection
 ssl	src/server/server.c	/^        SSL *ssl;$/;"	m	struct:sender_triplet	file:
 ssl	src/server/server_client.h	/^    SSL *ssl;$/;"	m	struct:server_client
 ssl	src/server/server_user.h	/^    SSL *ssl;$/;"	m	struct:server_user_connection
+ssl	src/client/client_ch.c	/^SSL *ssl;$/;"	v
 test_dp	src/test.c	/^static void test_dp()$/;"	f	file:
 test_ncurses	src/test.c	/^static void test_ncurses()$/;"	f	file:
 test_salt	src/test.c	/^static void test_salt()$/;"	f	file:
@@ -225,22 +227,22 @@ ubytes_to_string	src/utility/strings_helper.c	/^void ubytes_to_string(const unsi
 user	src/sql/sql_ch.c	/^    char user[64];$/;"	m	struct:sql_conection	file:
 username	src/server/server_user.h	/^    char *username;$/;"	m	struct:server_user
 username	src/server/server_user.h	/^    char *username;$/;"	m	struct:server_user_info
-users	src/server/server.c	/^static gdsl_rbtree_t users;$/;"	v	file:
 users_are_friends	src/server/server.c	/^static bool users_are_friends(int uid_from, int uid_to)$/;"	f	file:
+users	src/server/server.c	/^static gdsl_rbtree_t users;$/;"	v	file:
 vals	src/utility/vistack.h	/^    int *vals;$/;"	m	struct:vistack
 vals	src/utility/vstack.h	/^    void **vals;$/;"	m	struct:vstack
-vistack	src/utility/vistack.h	/^struct vistack {$/;"	s
 vistack_create	src/utility/vistack.c	/^struct vistack *vistack_create()$/;"	f
 vistack_destroy	src/utility/vistack.c	/^void vistack_destroy(struct vistack *s)$/;"	f
 vistack_get_size	src/utility/vistack.c	/^size_t vistack_get_size(struct vistack *s)$/;"	f
 vistack_is_empty	src/utility/vistack.c	/^int vistack_is_empty(struct vistack *s)$/;"	f
 vistack_pop	src/utility/vistack.c	/^int vistack_pop(struct vistack *s)$/;"	f
 vistack_push	src/utility/vistack.c	/^void vistack_push(struct vistack *s, int v)$/;"	f
-vstack	src/utility/vstack.h	/^struct vstack {$/;"	s
+vistack	src/utility/vistack.h	/^struct vistack {$/;"	s
 vstack_create	src/utility/vstack.c	/^struct vstack *vstack_create()$/;"	f
 vstack_destroy	src/utility/vstack.c	/^void vstack_destroy(struct vstack *s)$/;"	f
 vstack_get_size	src/utility/vstack.c	/^size_t vstack_get_size(struct vstack *s)$/;"	f
 vstack_is_empty	src/utility/vstack.c	/^int vstack_is_empty(struct vstack *s)$/;"	f
 vstack_pop	src/utility/vstack.c	/^void *vstack_pop(struct vstack *s)$/;"	f
 vstack_push	src/utility/vstack.c	/^void vstack_push(struct vstack *s, void *v)$/;"	f
+vstack	src/utility/vstack.h	/^struct vstack {$/;"	s
 write_usernames_to_dp	src/server/server.c	/^static void write_usernames_to_dp(datapacket *dp)$/;"	f	file:
