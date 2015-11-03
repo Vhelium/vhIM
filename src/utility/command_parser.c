@@ -12,7 +12,9 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
     int ret = -1;
     char *cmd = input_buffer + 1;
     char *type = NULL;
-    next_word(&cmd, &type);
+    if (!next_word(&cmd, &type)) { /* get first argument */
+        return 4;
+    }
 
     /* kick */
     if (strcmp(type, "kick") == 0) {
@@ -146,6 +148,26 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
         else
             ret = 2;
         free(user);
+    }
+    else if (strcmp(type, "gcreate") == 0) {
+        char *name = NULL;
+        if (next_word(&cmd, &name)) {
+            char *a[] = {name};
+            exec_cmd(MSG_GROUP_CREATE, a);
+        }
+        else
+            ret = 2;
+        free(name);
+    }
+    else if (strcmp(type, "gdelete") == 0) {
+        char *gid= NULL;
+        if (next_word(&cmd, &gid)) {
+            char *a[] = {gid};
+            exec_cmd(MSG_GROUP_DELETE, a);
+        }
+        else
+            ret = 2;
+        free(gid);
     }
     /* invalid command */
     else
