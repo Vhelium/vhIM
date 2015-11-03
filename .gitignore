@@ -1,4 +1,6 @@
 bin/
 
+tags
 src/tags
 *.taghl
+*.swp
