@@ -162,8 +162,7 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
         case MSG_WHO: {
                 int ucount = get_user_count();
                 // loop all users
-                // print id and name to buffer
-                // send buffer to user
+                // set name and id into datapacket
                 datapacket *answer = datapacket_create(MSG_WHO);
                 datapacket_set_int(answer, ucount);
 
@@ -722,12 +721,9 @@ static size_t get_user_count()
 static int map_write_usernames(const gdsl_element_t e, gdsl_location_t l, void *ud)
 {
     struct server_user *user = (struct server_user *)e;
-    char *ustr = malloc(sizeof(user->username) + 64); /* space for digits */
-    sprintf(ustr, "%s(%d)", user->username, user->id);
 
-    datapacket_set_string((datapacket *)ud, ustr);
-    
-    free(ustr);
+    datapacket_set_int((datapacket *)ud, user->id); /* id */
+    datapacket_set_string((datapacket *)ud, user->username);  /* name */
 
     return GDSL_MAP_CONT;
 }

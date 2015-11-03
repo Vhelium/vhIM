@@ -20,7 +20,7 @@ datapacket *datapacket_create_from_data(byte *data);
 void datapacket_set_bool(datapacket *dp, bool b);
 void datapacket_set_int(datapacket *dp, int i);
 void datapacket_set_long(datapacket *dp, long l);
-void datapacket_set_string(datapacket *dp, char *s);
+void datapacket_set_string(datapacket *dp, const char *s);
 
 int datapacket_simulate_int(datapacket *dp);
 void datapacket_update_int(datapacket *dp, int index, int i);

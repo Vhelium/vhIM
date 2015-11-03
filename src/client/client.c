@@ -8,22 +8,32 @@
 #include <ctype.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
+#include "../utility/vstack.h"
 #include "../utility/command_parser.h"
 #include "../utility/strings_helper.h"
 
 #include "../constants.h"
-#include "client_ch.h"
 #include "../network/messagetypes.h"
 #include "../network/datapacket.h"
+
+#include "client_ch.h"
+#include "client_ui_cons.h"
+#include "client_ui_gui.h"
+#include "client_callback.h"
+
+#include "../server/server_user.h"
 
 #define PORT 55099
 #define HOST "vhelium.com"
 
+static cb_generic_t callbacks[100];
+
 static char arg_host[128] = {0};
 static int arg_port;
 
-static int client_connect(char *server, int port);
+static int client_connect(const char *server, int port);
 static int client_disconnect();
 
 /* Send datapacket to server
@@ -46,12 +56,7 @@ static void process_packet(void *sender, byte *data)
     switch(packet_type) {
         case MSG_WELCOME:  {
             char *msg = datapacket_get_string(dp);
-            printf("[INFO]: Server welcomes you: %s\n", msg);
-
-//            datapacket *answer = datapacket_create(MSG_BROADCAST);
-//            datapacket_set_string(answer, "Hi all. I'm Auth'ed :)");
-//            send_to_server(answer);
-
+            ((cb_welcome_t)callbacks[MSG_WELCOME])(msg);
             free(msg);
         }
         break;
@@ -59,12 +64,7 @@ static void process_packet(void *sender, byte *data)
         case MSG_AUTH_FAILED:  {
             char *msg = datapacket_get_string(dp);
             int res = datapacket_get_int(dp);
-            printf("[INFO]: %s\nError Code: %d\n", msg, res);
-
-            datapacket *answer = datapacket_create(MSG_BROADCAST);
-            datapacket_set_string(answer, "Hi all. I am a failure :/");
-            send_to_server(answer);
-
+            ((cb_auth_failed_t)callbacks[MSG_AUTH_FAILED])(msg, res);
             free(msg);
         }
         break;
@@ -72,7 +72,7 @@ static void process_packet(void *sender, byte *data)
         case MSG_BROADCAST: {
             char *name = datapacket_get_string(dp);
             char *msg = datapacket_get_string(dp);
-            printf("[%s]: %s\n", name, msg);
+            ((cb_broadcast_t)callbacks[MSG_BROADCAST])(name, msg);
             free(name);
             free(msg);
         }
@@ -80,86 +80,154 @@ static void process_packet(void *sender, byte *data)
 
         case MSG_SYSTEM_MSG: {
             char *msg = datapacket_get_string(dp);
-            printf("[SERVER]: %s\n", msg);
+            ((cb_system_msg_t)callbacks[MSG_SYSTEM_MSG])(msg);
             free(msg);
         }
         break;
 
         case MSG_REGISTR_SUCCESSFUL: {
             char *msg = datapacket_get_string(dp);
-            printf("%s\n", msg);
-
+            ((cb_registr_successful_t)callbacks[MSG_REGISTR_SUCCESSFUL])(msg);
             free(msg);
         }
 
         case MSG_REGISTR_FAILED: {
             char *msg = datapacket_get_string(dp);
-            printf("[server]: %s\n", msg);
+            ((cb_registr_failed_t)callbacks[MSG_REGISTR_FAILED])(msg);
             free(msg);
         }
         break;
 
         case MSG_WHO: {
+            struct vstack *users = vstack_create();
             int i, count = datapacket_get_int(dp);
-            printf("Users online: %d\n", count);
+
             for (i=0; i<count; ++i) {
-                char *u = datapacket_get_string(dp);
-                printf("    %s\n", u);
-                free(u);
+                int uid = datapacket_get_int(dp);
+                char *uname = datapacket_get_string(dp);
+
+                /* save on the stack */
+                struct server_user_info *info = malloc(sizeof(struct server_user_info));
+                info->username = malloc(strlen(uname) + 1);
+                strcpy(info->username, uname);
+                info->id = uid;
+
+                vstack_push(users, info);
+
+                free(uname);
             }
-            printf("\n\n");
+
+            /* callback has to make sure to free the info structs, leaving an empty stack! */
+            ((cb_who_t)callbacks[MSG_WHO])(users);
+
+            /* make sure the stack is empty */
+            while (!vstack_is_empty(users)) {
+                struct server_user_info *info = (struct server_user_info *)vstack_pop(users);
+                free(info->username);
+                free(info);
+            }
+            /* free stack struct */
+            free(users);
         }
         break;
 
         case MSG_FRIENDS: {
+            struct vstack *on = vstack_create(), *off = vstack_create(), *req = vstack_create();
             int i, req_len, off_len, on_len = datapacket_get_int(dp);
-            printf("Friends online: %d\n", on_len);
+
+            /* online */
             for (i=0; i<on_len; ++i) {
                 int uid = datapacket_get_int(dp);
                 char *u = datapacket_get_string(dp);
-                printf("    %s(%d)\n", u, uid);
+
+                /* save on the stack */
+                struct server_user_info *info = malloc(sizeof(struct server_user_info));
+                info->username = malloc(strlen(u) + 1);
+                strcpy(info->username, u);
+                info->id = uid;
+
+                vstack_push(on, info);
+
                 free(u);
             }
-            printf("\n\n");
-            
+
+            /* offline */
             off_len = datapacket_get_int(dp);
-            printf("Friends offline: %d\n", off_len);
             for (i=0; i<off_len; ++i) {
                 int uid = datapacket_get_int(dp);
                 char *u = datapacket_get_string(dp);
-                printf("    %s(%d)\n", u, uid);
+
+                /* save on the stack */
+                struct server_user_info *info = malloc(sizeof(struct server_user_info));
+                info->username = malloc(strlen(u) + 1);
+                strcpy(info->username, u);
+                info->id = uid;
+
+                vstack_push(off, info);
+
                 free(u);
             }
-            printf("\n\n");
 
+            /* requests */
             req_len = datapacket_get_int(dp);
-            printf("Pending friend requests: %d\n", req_len);
             for (i=0; i<req_len; ++i) {
                 int uid = datapacket_get_int(dp);
                 char *u = datapacket_get_string(dp);
-                printf("    %s(%d)\n", u, uid);
+
+                /* save on the stack */
+                struct server_user_info *info = malloc(sizeof(struct server_user_info));
+                info->username = malloc(strlen(u) + 1);
+                strcpy(info->username, u);
+                info->id = uid;
+
+                vstack_push(req, info);
+
                 free(u);
             }
+
+            /* callback has to make sure to free the info structs, leaving empty stacks */
+            ((cb_friends_t)callbacks[MSG_FRIENDS])(on, off, req);
+
+            /* make sure the stack is empty */
+            while (!vstack_is_empty(on)) {
+                struct server_user_info *info = (struct server_user_info *)vstack_pop(on);
+                free(info->username);
+                free(info);
+            }
+            while (!vstack_is_empty(off)) {
+                struct server_user_info *info = (struct server_user_info *)vstack_pop(off);
+                free(info->username);
+                free(info);
+            }
+            while (!vstack_is_empty(req)) {
+                struct server_user_info *info = (struct server_user_info *)vstack_pop(req);
+                free(info->username);
+                free(info);
+            }
+            /* free stack structs */
+            free(on);
+            free(off);
+            free(req);
         }
         break;
 
         case MSG_REMOVE_FRIEND: {
-            int f = datapacket_get_int(dp);
-            printf("Friend removed: %d\n", f);
+            int uid = datapacket_get_int(dp);
+            ((cb_remove_friend_t)callbacks[MSG_REMOVE_FRIEND])(uid);
         }
         break;
 
         case MSG_FRIEND_ONLINE: {
-            int f = datapacket_get_int(dp);
+            int uid = datapacket_get_int(dp);
             char *uname = datapacket_get_string(dp);
-            printf("Friend came online: %s(%d)\n", uname, f);
+            ((cb_friend_online_t)callbacks[MSG_FRIEND_ONLINE])(uid, uname);
             free(uname);
         }
         break;
 
         case MSG_FRIEND_OFFLINE: {
-            int f = datapacket_get_int(dp);
-            printf("Friend with id %d went offline.\n", f);
+            int uid = datapacket_get_int(dp);
+            ((cb_friend_offline_t)callbacks[MSG_FRIEND_OFFLINE])(uid);
         }
         break;
 
@@ -171,125 +239,105 @@ static void process_packet(void *sender, byte *data)
     datapacket_destroy(dp); // destroy the dp with its data array
 }
 
-static int execute_command(int type, char *argv[])
+/* ====================== EXECUTE FUNCTIOMS ================================ */
+
+int cl_exec_broadcast(const char *msg)
 {
-    switch (type)
-    {
-        case MSG_CMD_KICK_ID: {
-            /* check if passed argument is a number */
-            if (!is_decimal_number(argv[0]))
-                return 3;
-            int uid = atoi(argv[0]);
-            printf("uid: %d\n", uid);
-            datapacket *dp = datapacket_create(MSG_CMD_KICK_ID);
-            datapacket_set_int(dp, uid);
-            send_to_server(dp);
-        }
-        break;
+    datapacket *dp = datapacket_create(MSG_BROADCAST);
+    datapacket_set_string(dp, msg);
+    send_to_server(dp);
+    return 0;
+}
 
-        case MSG_WHISPER: {
-            /* check if passed argument is a number */
-            if (!is_decimal_number(argv[0]))
-                return 3;
-            int uid = atoi(argv[0]);
-            datapacket *dp = datapacket_create(MSG_WHISPER);
-            datapacket_set_int(dp, uid);
-            datapacket_set_string(dp, argv[1]);
-            send_to_server(dp);
-        }
-        break;
+int cl_exec_kick(int uid)
+{
+    datapacket *dp = datapacket_create(MSG_CMD_KICK_ID);
+    datapacket_set_int(dp, uid);
+    send_to_server(dp);
+    return 0;
+}
 
-        case MSG_REQ_REGISTER: {
-            datapacket *dp = datapacket_create(MSG_REQ_REGISTER);
-            datapacket_set_string(dp, argv[0]);
-            datapacket_set_string(dp, argv[1]);
-            send_to_server(dp);
-        }
-        break;
+int cl_exec_whisper(int uid, const char *msg)
+{
+    datapacket *dp = datapacket_create(MSG_WHISPER);
+    datapacket_set_int(dp, uid);
+    datapacket_set_string(dp, msg);
+    send_to_server(dp);
+    return 0;
+}
 
-        case MSG_REQ_LOGIN: {
-            datapacket *dp = datapacket_create(MSG_REQ_LOGIN);
-            datapacket_set_string(dp, argv[0]);
-            datapacket_set_string(dp, argv[1]);
-            send_to_server(dp);
-        }
-        break;
+int cl_exec_req_register(const char *name, const char *pw)
+{
+    datapacket *dp = datapacket_create(MSG_REQ_REGISTER);
+    datapacket_set_string(dp, name);
+    datapacket_set_string(dp, pw);
+    send_to_server(dp);
+    return 0;
+}
 
-        case MSG_LOGOUT: {
-            datapacket *dp = datapacket_create(MSG_LOGOUT);
-            send_to_server(dp);
-        }
-        break;
+int cl_exec_req_login(const char *name, const char *pw)
+{
+    datapacket *dp = datapacket_create(MSG_REQ_LOGIN);
+    datapacket_set_string(dp, name);
+    datapacket_set_string(dp, pw);
+    send_to_server(dp);
+    return 0;
+}
 
-        case MSG_WHO: {
-            datapacket *dp = datapacket_create(MSG_WHO);
-            send_to_server(dp);
-        }
-        break;
+int cl_exec_logout(void)
+{
+    datapacket *dp = datapacket_create(MSG_LOGOUT);
+    send_to_server(dp);
+    return 0;
+}
 
-        case MSG_FRIENDS: {
-            datapacket *dp = datapacket_create(MSG_FRIENDS);
-            send_to_server(dp);
-        }
-        break;
+int cl_exec_who(void)
+{
+    datapacket *dp = datapacket_create(MSG_WHO);
+    send_to_server(dp);
+    return 0;
+}
 
-        case CMD_CONNECT: {
-            /* check if passed argument is a number */
-            if (argv[1] != NULL && !is_decimal_number(argv[1]))
-                return 3;
-            int port = argv[1] != NULL ? atoi(argv[1]) : PORT;
-            if (client_connect(argv[0], port)) {
-                printf("error connecting to host\n");
-                exit(1);
-            }
-        }
-        break;
+int cl_exec_friends(void)
+{
+    datapacket *dp = datapacket_create(MSG_FRIENDS);
+    send_to_server(dp);
+    return 0;
+}
 
-        case CMD_DISCONNECT: {
-            client_disconnect();
-        }
-        break;
+int cl_exec_connect(const char *server, int port)
+{
+    return client_connect(server, port);
+}
 
-        case MSG_GRANT_PRIVILEGES: {
-            if (is_decimal_number(argv[0]) && is_decimal_number(argv[1])) {
-                datapacket *dp = datapacket_create(MSG_GRANT_PRIVILEGES);
-                datapacket_set_int(dp, atoi(argv[0]));
-                datapacket_set_int(dp, atoi(argv[1]));
-                send_to_server(dp);
-            }
-            else
-                printf("invalid arguments.\n");
-        }
-        break;
+int cl_exec_disconnect(void)
+{
+    client_disconnect();
+    return 0;
+}
 
-        case MSG_ADD_FRIEND: {
-            if (is_decimal_number(argv[0])) {
-                datapacket *dp = datapacket_create(MSG_ADD_FRIEND);
-                datapacket_set_int(dp, atoi(argv[0]));
-                send_to_server(dp);
-            }
-        }
-        break;
- 
-        case MSG_REMOVE_FRIEND: {
-            if (is_decimal_number(argv[0])) {
-                datapacket *dp = datapacket_create(MSG_REMOVE_FRIEND);
-                datapacket_set_int(dp, atoi(argv[0]));
-                send_to_server(dp);
-            }
-        }
-        break;
+int cl_exec_grant_privileges(int uid, int lvl)
+{
+    datapacket *dp = datapacket_create(MSG_GRANT_PRIVILEGES);
+    datapacket_set_int(dp, uid);
+    datapacket_set_int(dp, lvl);
+    send_to_server(dp);
+    return 0;
+}
 
-        case CMD_HELP: {
-            printf("Go fuck yourself.\n");
-        }
-        break;
+int cl_exec_add_friend(int uid)
+{
+    datapacket *dp = datapacket_create(MSG_ADD_FRIEND);
+    datapacket_set_int(dp, uid);
+    send_to_server(dp);
+    return 0;
+}
 
-        default:
-            printf("Invalid command\n");
-            return 1;
-    }
-
+int cl_exec_remove_friend(int uid)
+{
+    datapacket *dp = datapacket_create(MSG_REMOVE_FRIEND);
+    datapacket_set_int(dp, uid);
+    send_to_server(dp);
     return 0;
 }
 
@@ -307,7 +355,7 @@ static void set_is_connected_synced(bool b)
     pthread_mutex_unlock(&mutex_connected);
 }
 
-static bool get_is_connected_synced()
+bool cl_get_is_connected_synced()
 {
     bool b;
     pthread_mutex_lock(&mutex_connected);
@@ -335,7 +383,7 @@ void *threaded_connect(void *arg)
     return NULL;
 }
 
-static int client_connect(char *host, int port)
+static int client_connect(const char *host, int port)
 {
     if (!host)
         memcpy(arg_host, HOST, strlen(HOST));
@@ -364,7 +412,7 @@ static int client_connect(char *host, int port)
 static int client_disconnect()
 {
     /* if already connected to a server be sure to disconnect first */
-    if (get_is_connected_synced()) {
+    if (cl_get_is_connected_synced()) {
         /* send msg to server */
         datapacket *msg = datapacket_create(MSG_DISCONNECT);
         send_to_server(msg);
@@ -379,46 +427,39 @@ static int client_disconnect()
     return 0;
 }
 
-/* ============== MAIN & INPUT ========================================= */
-
-static char input_buffer[1024+1];
-
-void *process_input()
-{
-    for(;;) {
-        int n = read_line(input_buffer, 1024);
-        if (n>0) {
-            if (input_buffer[0] == '/') {
-                process_command(input_buffer, &execute_command);
-            }
-            /* check if connected to a server */
-            else if(get_is_connected_synced()) {
-                datapacket *dp = datapacket_create(MSG_BROADCAST);
-                datapacket_set_string(dp, input_buffer);
-                send_to_server(dp);
-            }
-            else
-                printf("Not connected to a server.\n");
-        }
-    }
-    return NULL;
-}
+/* ============== MAIN ========================================= */
 
 int main(int argc, char *argv[])
 {
-    if (argc >= 2) {
-        size_t arg_len = strlen(argv[1]);
-        if (arg_len < sizeof(arg_host))
-            memcpy(arg_host, argv[1], arg_len);
-    }
-    if (argc >= 3) {
-        arg_port = atoi(argv[2]);
+    bool is_gui = false;
+    int i, param_count = 0;
+    for(i = 1; i < argc; ++i) {
+        if (argv[i][0] == '-' && argv[i][1] == '-') { /* modifier */
+            if(strcmp(&argv[i][2], "gui") == 0) { /* gui */
+                is_gui = true;
+            }
+        }
+        else if (param_count == 0) { /* server */
+            size_t arg_len = strlen(argv[1]);
+            if (arg_len < sizeof(arg_host))
+                memcpy(arg_host, argv[1], arg_len);
+
+            param_count++;
+        }
+        else if (param_count == 1) { /* port */
+            arg_port = atoi(argv[2]);
+
+            param_count++;
+        }
     }
 
-    process_input();
+    if (is_gui)
+        cl_ui_gui_start(callbacks, PORT);
+    else
+        cl_ui_cons_start(callbacks, PORT);
 
     /* destroy the connection if it is still active. */
-    if (get_is_connected_synced()) {
+    if (cl_get_is_connected_synced()) {
         client_ch_destroy();
     }
     

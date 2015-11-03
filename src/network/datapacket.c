@@ -87,7 +87,7 @@ void datapacket_set_long(datapacket *dp, long l)
 
 }
 
-void datapacket_set_string(datapacket *dp, char *s)
+void datapacket_set_string(datapacket *dp, const char *s)
 {
     int len = strlen(s);
 

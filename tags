@@ -6,21 +6,25 @@
 !_TAG_PROGRAM_VERSION	5.8	//
 BYTECONVERTER_H	src/network/byteconverter.h	2;"	d
 BYTEPROCESSOR_H	src/network/byteprocessor.h	2;"	d
+CLIENT_CALLBACK_H	src/client/client_callback.h	2;"	d
 CLIENT_CH_H	src/client/client_ch.h	2;"	d
-CMD_CONNECT	src/network/messagetypes.h	25;"	d
-CMD_DISCONNECT	src/network/messagetypes.h	26;"	d
-CMD_HELP	src/network/messagetypes.h	27;"	d
-CMD_INVALID	src/network/messagetypes.h	28;"	d
+CLIENT_H	src/client/client.h	2;"	d
+CLIENT_UI_CONS_H	src/client/client_ui_cons.h	2;"	d
+CLIENT_UI_GUI_H	src/client/client_ui_gui.h	2;"	d
+CMD_CONNECT	src/network/messagetypes.h	24;"	d
+CMD_DISCONNECT	src/network/messagetypes.h	25;"	d
+CMD_HELP	src/network/messagetypes.h	26;"	d
+CMD_INVALID	src/network/messagetypes.h	27;"	d
 COMMAND_PARSER_H	src/utility/command_parser.h	2;"	d
 CONSTANTS_H	src/constants.h	2;"	d
 DATAPACKET_H	src/network/datapacket.h	2;"	d
 DEBUG	src/constants.h	10;"	d
-HOST	src/client/client.c	21;"	d	file:
+HOST	src/client/client.c	28;"	d	file:
 MESSAGETYPES_H	src/network/messagetypes.h	2;"	d
 MSG_ADD_FRIEND	src/network/messagetypes.h	16;"	d
 MSG_AUTH_FAILED	src/network/messagetypes.h	7;"	d
 MSG_BROADCAST	src/network/messagetypes.h	8;"	d
-MSG_CMD_KICK_ID	src/network/messagetypes.h	23;"	d
+MSG_CMD_KICK_ID	src/network/messagetypes.h	22;"	d
 MSG_DISCONNECT	src/network/messagetypes.h	14;"	d
 MSG_FRIENDS	src/network/messagetypes.h	18;"	d
 MSG_FRIEND_OFFLINE	src/network/messagetypes.h	21;"	d
@@ -37,7 +41,7 @@ MSG_WELCOME	src/network/messagetypes.h	6;"	d
 MSG_WHISPER	src/network/messagetypes.h	9;"	d
 MSG_WHO	src/network/messagetypes.h	13;"	d
 PACKET_SIZE	src/network/datapacket.h	8;"	d
-PORT	src/client/client.c	20;"	d	file:
+PORT	src/client/client.c	27;"	d	file:
 PORT	src/server/server.c	22;"	d	file:
 SERVER_CH_H	src/server/server_ch.h	2;"	d
 SERVER_CLIENT_H	src/server/server_client.h	2;"	d
@@ -73,14 +77,65 @@ byte	src/constants.h	/^typedef unsigned char byte;$/;"	t
 callback_cl_cntd_t	src/server/server_ch.h	/^typedef void (*callback_cl_cntd_t)(struct server_client *su);$/;"	t
 callback_cl_dc	src/server/server_ch.h	/^typedef void (*callback_cl_dc)(struct server_client *su);$/;"	t
 callback_msg_rcv_t	src/network/byteprocessor.h	/^typedef void (*callback_msg_rcv_t)(void *sender, byte *data);$/;"	t
+callbacks	src/client/client.c	/^static cb_generic_t callbacks[100];$/;"	v	file:
+cb_auth_failed_t	src/client/client_callback.h	/^typedef void (*cb_auth_failed_t)(const char *msg, int res);$/;"	t
+cb_auth_failed	src/client/client_ui_cons.c	/^static void cb_auth_failed(const char *msg, int res)$/;"	f	file:
+cb_auth_failed	src/client/client_ui_gui.c	/^static void cb_auth_failed(const char *msg, int res)$/;"	f	file:
+cb_broadcast_t	src/client/client_callback.h	/^typedef void (*cb_broadcast_t)(const char *name, const char *msg);$/;"	t
+cb_broadcast	src/client/client_ui_cons.c	/^static void cb_broadcast(const char *name, const char *msg)$/;"	f	file:
+cb_broadcast	src/client/client_ui_gui.c	/^static void cb_broadcast(const char *name, const char *msg)$/;"	f	file:
 cb_cl_cntd	src/server/server.c	/^static void cb_cl_cntd(struct server_client *sc)$/;"	f	file:
 cb_cl_dc	src/server/server.c	/^static void cb_cl_dc(struct server_client *sc)$/;"	f	file:
+cb_friend_offline_t	src/client/client_callback.h	/^typedef void (*cb_friend_offline_t)(int uid);$/;"	t
+cb_friend_offline	src/client/client_ui_cons.c	/^static void cb_friend_offline(int uid)$/;"	f	file:
+cb_friend_offline	src/client/client_ui_gui.c	/^static void cb_friend_offline(int uid)$/;"	f	file:
+cb_friend_online_t	src/client/client_callback.h	/^typedef void (*cb_friend_online_t)(int uid, const char *name);$/;"	t
+cb_friend_online	src/client/client_ui_cons.c	/^static void cb_friend_online(int uid, const char *name)$/;"	f	file:
+cb_friend_online	src/client/client_ui_gui.c	/^static void cb_friend_online(int uid, const char *name)$/;"	f	file:
+cb_friends_t	src/client/client_callback.h	/^typedef void (*cb_friends_t)(struct vstack *on, struct vstack *off, struct vstack *req);$/;"	t
+cb_friends	src/client/client_ui_cons.c	/^static void cb_friends(struct vstack *on, struct vstack *off, struct vstack *req)$/;"	f	file:
+cb_friends	src/client/client_ui_gui.c	/^static void cb_friends(struct vstack *on, struct vstack *off, struct vstack *req)$/;"	f	file:
+cb_generic_t	src/client/client_callback.h	/^typedef int (*cb_generic_t)(void);$/;"	t
 cb_msg_rcv	src/server/server.c	/^static void cb_msg_rcv(void *sc, byte *data)$/;"	f	file:
+cb_registr_failed_t	src/client/client_callback.h	/^typedef void (*cb_registr_failed_t)(const char *msg);$/;"	t
+cb_registr_failed	src/client/client_ui_cons.c	/^static void cb_registr_failed(const char *msg)$/;"	f	file:
+cb_registr_failed	src/client/client_ui_gui.c	/^static void cb_registr_failed(const char *msg)$/;"	f	file:
+cb_registr_successful_t	src/client/client_callback.h	/^typedef void (*cb_registr_successful_t)(const char *msg);$/;"	t
+cb_registr_successful	src/client/client_ui_cons.c	/^static void cb_registr_successful(const char *msg)$/;"	f	file:
+cb_registr_successful	src/client/client_ui_gui.c	/^static void cb_registr_successful(const char *msg)$/;"	f	file:
+cb_remove_friend_t	src/client/client_callback.h	/^typedef void (*cb_remove_friend_t)(int uid);$/;"	t
+cb_remove_friend	src/client/client_ui_cons.c	/^static void cb_remove_friend(int uid)$/;"	f	file:
+cb_remove_friend	src/client/client_ui_gui.c	/^static void cb_remove_friend(int uid)$/;"	f	file:
+cb_system_msg_t	src/client/client_callback.h	/^typedef void (*cb_system_msg_t)(const char *msg);$/;"	t
+cb_system_msg	src/client/client_ui_cons.c	/^static void cb_system_msg(const char *msg)$/;"	f	file:
+cb_system_msg	src/client/client_ui_gui.c	/^static void cb_system_msg(const char *msg)$/;"	f	file:
+cb_welcome_t	src/client/client_callback.h	/^typedef void (*cb_welcome_t)(const char *msg);$/;"	t
+cb_welcome	src/client/client_ui_cons.c	/^static void cb_welcome (const char *msg)$/;"	f	file:
+cb_welcome	src/client/client_ui_gui.c	/^static void cb_welcome (const char *msg)$/;"	f	file:
+cb_who_t	src/client/client_callback.h	/^typedef void (*cb_who_t)(struct vstack *users);$/;"	t
+cb_who	src/client/client_ui_cons.c	/^static void cb_who(struct vstack *users)$/;"	f	file:
+cb_who	src/client/client_ui_gui.c	/^static void cb_who(struct vstack *users)$/;"	f	file:
+cl_exec_add_friend	src/client/client.c	/^int cl_exec_add_friend(int uid)$/;"	f
+cl_exec_broadcast	src/client/client.c	/^int cl_exec_broadcast(const char *msg)$/;"	f
+cl_exec_connect	src/client/client.c	/^int cl_exec_connect(const char *server, int port)$/;"	f
+cl_exec_disconnect	src/client/client.c	/^int cl_exec_disconnect(void)$/;"	f
+cl_exec_friends	src/client/client.c	/^int cl_exec_friends(void)$/;"	f
+cl_exec_grant_privileges	src/client/client.c	/^int cl_exec_grant_privileges(int uid, int lvl)$/;"	f
+cl_exec_kick	src/client/client.c	/^int cl_exec_kick(int uid)$/;"	f
+cl_exec_logout	src/client/client.c	/^int cl_exec_logout(void)$/;"	f
+cl_exec_remove_friend	src/client/client.c	/^int cl_exec_remove_friend(int uid)$/;"	f
+cl_exec_req_login	src/client/client.c	/^int cl_exec_req_login(const char *name, const char *pw)$/;"	f
+cl_exec_req_register	src/client/client.c	/^int cl_exec_req_register(const char *name, const char *pw)$/;"	f
+cl_exec_whisper	src/client/client.c	/^int cl_exec_whisper(int uid, const char *msg)$/;"	f
+cl_exec_who	src/client/client.c	/^int cl_exec_who(void)$/;"	f
+cl_get_is_connected_synced	src/client/client.c	/^bool cl_get_is_connected_synced()$/;"	f
+cl_ui_cons_start	src/client/client_ui_cons.c	/^void cl_ui_cons_start(cb_generic_t *cbs, int port)$/;"	f
+cl_ui_gui_start	src/client/client_ui_gui.c	/^void cl_ui_gui_start(cb_generic_t *cbs, int port)$/;"	f
 client_ch_destroy	src/client/client_ch.c	/^void client_ch_destroy()$/;"	f
 client_ch_listen	src/client/client_ch.c	/^void client_ch_listen(callback_msg_rcv_t cb_msg_rcv)$/;"	f
 client_ch_send	src/client/client_ch.c	/^void client_ch_send(byte *data, size_t data_len)$/;"	f
 client_ch_start	src/client/client_ch.c	/^int client_ch_start(char *host, int port)$/;"	f
-client_connect	src/client/client.c	/^static int client_connect(char *host, int port)$/;"	f	file:
+client_connect	src/client/client.c	/^static int client_connect(const char *host, int port)$/;"	f	file:
 client_disconnect	src/client/client.c	/^static int client_disconnect()$/;"	f	file:
 clients	src/server/server_ch.c	/^static gdsl_rbtree_t clients; \/\/ list of all connected clients$/;"	v	file:
 compare_client_fd_directly	src/server/server_ch.c	/^static long int compare_client_fd_directly(const gdsl_element_t E, void *VALUE)$/;"	f	file:
@@ -107,7 +162,7 @@ datapacket_reset	src/network/datapacket.c	/^void datapacket_reset(datapacket *dp
 datapacket_set_bool	src/network/datapacket.c	/^void datapacket_set_bool(datapacket *dp, bool b)$/;"	f
 datapacket_set_int	src/network/datapacket.c	/^void datapacket_set_int(datapacket *dp, int i)$/;"	f
 datapacket_set_long	src/network/datapacket.c	/^void datapacket_set_long(datapacket *dp, long l)$/;"	f
-datapacket_set_string	src/network/datapacket.c	/^void datapacket_set_string(datapacket *dp, char *s)$/;"	f
+datapacket_set_string	src/network/datapacket.c	/^void datapacket_set_string(datapacket *dp, const char *s)$/;"	f
 datapacket_simulate_int	src/network/datapacket.c	/^int datapacket_simulate_int(datapacket *dp)$/;"	f
 datapacket_update_int	src/network/datapacket.c	/^void datapacket_update_int(datapacket *dp, int index, int i)$/;"	f
 datapacket_verify_size	src/network/datapacket.c	/^static void datapacket_verify_size(datapacket *dp, size_t additional)$/;"	f	file:
@@ -115,10 +170,9 @@ datapacket	src/network/datapacket.h	/^} datapacket;$/;"	t	typeref:struct:__anon1
 db	src/sql/sql_ch.c	/^    char db[64];$/;"	m	struct:sql_conection	file:
 debugv	src/constants.h	12;"	d
 errv	src/constants.h	16;"	d
-execute_command	src/client/client.c	/^static int execute_command(int type, char *argv[])$/;"	f	file:
+execute_command	src/client/client_ui_cons.c	/^static int execute_command(int type, char *argv[])$/;"	f	file:
 fdmax	src/server/server_ch.c	/^static int fdmax;$/;"	v	file:
 get_client_by_fd	src/server/server_ch.c	/^static struct server_client *get_client_by_fd(int fd)$/;"	f	file:
-get_is_connected_synced	src/client/client.c	/^static bool get_is_connected_synced()$/;"	f	file:
 get_user_by_id	src/server/server.c	/^static struct server_user *get_user_by_id(int id)$/;"	f	file:
 get_user_count	src/server/server.c	/^static size_t get_user_count()$/;"	f	file:
 handle_packet_auth	src/server/server.c	/^static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *dp)$/;"	f	file:
@@ -129,7 +183,7 @@ id	src/server/server_user.h	/^    int id;$/;"	m	struct:server_user_info
 index	src/network/datapacket.h	/^    size_t index; \/\/ current index, in bytes$/;"	m	struct:__anon1
 init_ctx	src/client/client_ch.c	/^SSL_CTX* init_ctx(void)$/;"	f
 init_server_ctx	src/server/server_ch.c	/^static SSL_CTX *init_server_ctx(void)$/;"	f	file:
-input_buffer	src/client/client.c	/^static char input_buffer[1024+1];$/;"	v	file:
+input_buffer	src/client/client_ui_cons.c	/^static char input_buffer[1024+1];$/;"	v	file:
 input_thread	src/client/client.c	/^static pthread_t input_thread;$/;"	v	file:
 is_allowed	src/server/server.c	/^static bool is_allowed(unsigned char priv, int cmd)$/;"	f	file:
 is_connected	src/client/client.c	/^static bool is_connected = false;$/;"	v	file:
@@ -152,8 +206,10 @@ mutex_connected	src/client/client.c	/^static pthread_mutex_t mutex_connected;$/;
 next_word	src/utility/strings_helper.c	/^int next_word(char **in, char **out)$/;"	f
 next	src/server/server_user.h	/^    struct server_user_connection *next;$/;"	m	struct:server_user_connection	typeref:struct:server_user_connection::server_user_connection
 p_level	src/server/server_user.h	/^    unsigned char p_level;$/;"	m	struct:server_user
+port_default	src/client/client_ui_cons.c	/^static int port_default;$/;"	v	file:
+port_default	src/client/client_ui_gui.c	/^static int port_default;$/;"	v	file:
 process_command	src/utility/command_parser.c	/^int process_command(char *input_buffer, int (*exec_cmd)(int, char**))$/;"	f
-process_input	src/client/client.c	/^void *process_input()$/;"	f
+process_input	src/client/client_ui_cons.c	/^static void process_input()$/;"	f	file:
 process_packet	src/client/client.c	/^static void process_packet(void *sender, byte *data)$/;"	f	file:
 process_packet	src/server/server.c	/^static void process_packet(struct server_client *sc, byte *data)$/;"	f	file:
 pw	src/sql/sql_ch.c	/^    char pw[64];$/;"	m	struct:sql_conection	file:
