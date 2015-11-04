@@ -398,9 +398,9 @@ void *threaded_connect(void *arg)
 static int client_connect(const char *host, int port)
 {
     if (!host)
-        memcpy(arg_host, HOST, strlen(HOST));
+        memcpy(arg_host, HOST, strlen(HOST)+1);
     else
-        memcpy(arg_host, host, strlen(host));
+        memcpy(arg_host, host, strlen(host)+1);
     if (!port)
         arg_port = PORT;
     else
@@ -454,7 +454,7 @@ int main(int argc, char *argv[])
         else if (param_count == 0) { /* server */
             size_t arg_len = strlen(argv[1]);
             if (arg_len < sizeof(arg_host))
-                memcpy(arg_host, argv[1], arg_len);
+                memcpy(arg_host, argv[1], arg_len+1);
 
             param_count++;
         }
