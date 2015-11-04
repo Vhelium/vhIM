@@ -23,11 +23,13 @@ int next_word(char **in, char **out)
     while (*p != ' ' && *p != '\0')
         ++p;
     int len = p - s;
-    *out = malloc(sizeof(char) * (len+1));
-    memcpy(*out, s, len);
-    *(*out+len) = '\0';
+    if (len > 0) {
+        *out = malloc(sizeof(char) * (len+1));
+        memcpy(*out, s, len);
+        *(*out+len) = '\0';
 
-    *in = p; // adjust input line to 'delete' the first word
+        *in = p; // adjust input line to 'delete' the first word
+    }
 
     return len;
 }

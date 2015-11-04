@@ -29,4 +29,8 @@ int cl_exec_add_friend(int uid);
 
 int cl_exec_remove_friend(int uid);
 
+int cl_exec_group_create(const char *name);
+
+int cl_exec_group_delete(int uid);
+
 #endif

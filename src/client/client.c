@@ -341,6 +341,18 @@ int cl_exec_remove_friend(int uid)
     return 0;
 }
 
+int cl_exec_group_create(const char *name)
+{
+    //TODO
+    return 0;
+}
+
+int cl_exec_group_delete(int uid)
+{
+    //TODO
+    return 0;
+}
+
 /* ============== THREADING ========================================= */
 
 static bool is_connected = false;
