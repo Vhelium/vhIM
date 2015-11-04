@@ -1,5 +1,15 @@
+# Binary output files
 bin/
 
+# Certificates & keys
+vhIM.crt
+vhIM.key
+vhIM.csr
+
+# Emacs autosave files
+*~
+
+# Others
 tags
 src/tags
 *.taghl
