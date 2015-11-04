@@ -195,6 +195,18 @@ static int execute_command(int type, char *argv[])
         }
         break;
 
+        case MSG_GROUP_CREATE: {
+            cl_exec_group_create(argv[0]);
+        }
+        break;
+
+        case MSG_GROUP_DELETE: {
+            if (is_decimal_number(argv[0])) {
+                cl_exec_group_delete(atoi(argv[0]));
+            }
+        }
+        break;
+
         case CMD_HELP: {
             printf("Go fuck yourself.\n");
         }

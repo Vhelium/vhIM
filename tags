@@ -11,15 +11,15 @@ CLIENT_CH_H	src/client/client_ch.h	2;"	d
 CLIENT_H	src/client/client.h	2;"	d
 CLIENT_UI_CONS_H	src/client/client_ui_cons.h	2;"	d
 CLIENT_UI_GUI_H	src/client/client_ui_gui.h	2;"	d
-CMD_CONNECT	src/network/messagetypes.h	24;"	d
-CMD_DISCONNECT	src/network/messagetypes.h	25;"	d
-CMD_HELP	src/network/messagetypes.h	26;"	d
-CMD_INVALID	src/network/messagetypes.h	27;"	d
+CMD_CONNECT	src/network/messagetypes.h	26;"	d
+CMD_DISCONNECT	src/network/messagetypes.h	27;"	d
+CMD_HELP	src/network/messagetypes.h	28;"	d
+CMD_INVALID	src/network/messagetypes.h	29;"	d
 COMMAND_PARSER_H	src/utility/command_parser.h	2;"	d
 CONSTANTS_H	src/constants.h	2;"	d
 DATAPACKET_H	src/network/datapacket.h	2;"	d
 DEBUG	src/constants.h	10;"	d
-HOST	src/client/client.c	28;"	d	file:
+HOST	src/client/client.c	29;"	d	file:
 MESSAGETYPES_H	src/network/messagetypes.h	2;"	d
 MSG_ADD_FRIEND	src/network/messagetypes.h	16;"	d
 MSG_AUTH_FAILED	src/network/messagetypes.h	7;"	d
@@ -30,6 +30,8 @@ MSG_FRIENDS	src/network/messagetypes.h	18;"	d
 MSG_FRIEND_OFFLINE	src/network/messagetypes.h	21;"	d
 MSG_FRIEND_ONLINE	src/network/messagetypes.h	20;"	d
 MSG_GRANT_PRIVILEGES	src/network/messagetypes.h	15;"	d
+MSG_GROUP_CREATE	src/network/messagetypes.h	23;"	d
+MSG_GROUP_DELETE	src/network/messagetypes.h	24;"	d
 MSG_LOGOUT	src/network/messagetypes.h	12;"	d
 MSG_REGISTR_FAILED	src/network/messagetypes.h	11;"	d
 MSG_REGISTR_SUCCESSFUL	src/network/messagetypes.h	10;"	d
@@ -41,7 +43,7 @@ MSG_WELCOME	src/network/messagetypes.h	6;"	d
 MSG_WHISPER	src/network/messagetypes.h	9;"	d
 MSG_WHO	src/network/messagetypes.h	13;"	d
 PACKET_SIZE	src/network/datapacket.h	8;"	d
-PORT	src/client/client.c	27;"	d	file:
+PORT	src/client/client.c	28;"	d	file:
 PORT	src/server/server.c	22;"	d	file:
 SERVER_CH_H	src/server/server_ch.h	2;"	d
 SERVER_CLIENT_H	src/server/server_client.h	2;"	d
@@ -121,6 +123,8 @@ cl_exec_connect	src/client/client.c	/^int cl_exec_connect(const char *server, in
 cl_exec_disconnect	src/client/client.c	/^int cl_exec_disconnect(void)$/;"	f
 cl_exec_friends	src/client/client.c	/^int cl_exec_friends(void)$/;"	f
 cl_exec_grant_privileges	src/client/client.c	/^int cl_exec_grant_privileges(int uid, int lvl)$/;"	f
+cl_exec_group_create	src/client/client.c	/^int cl_exec_group_create(const char *name)$/;"	f
+cl_exec_group_delete	src/client/client.c	/^int cl_exec_group_delete(int uid)$/;"	f
 cl_exec_kick	src/client/client.c	/^int cl_exec_kick(int uid)$/;"	f
 cl_exec_logout	src/client/client.c	/^int cl_exec_logout(void)$/;"	f
 cl_exec_remove_friend	src/client/client.c	/^int cl_exec_remove_friend(int uid)$/;"	f
