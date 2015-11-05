@@ -466,10 +466,12 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (is_gui)
+    if (is_gui) {
         ret = cl_ui_gui_start(callbacks, PORT);
-    else
+    }
+    else {
         cl_ui_cons_start(callbacks, PORT);
+    }
 
     /* destroy the connection if it is still active. */
     if (cl_get_is_connected_synced()) {
@@ -477,6 +479,5 @@ int main(int argc, char *argv[])
     }
     
     pthread_mutex_destroy(&mutex_connected);
-    pthread_exit(NULL);
     return ret;
 }
