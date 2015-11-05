@@ -2,5 +2,6 @@
 <gresources>
     <gresource prefix="/res/">
         <file preprocess="xml-stripblanks">client_ui_gui_main.ui</file>
+        <file preprocess="xml-stripblanks">client_ui_gui_app_menu.ui</file>
     </gresource>
 </gresources>

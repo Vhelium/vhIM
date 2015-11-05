@@ -115,6 +115,12 @@ static void cl_ui_gui_init(ClientGui *app)
 {
 }
 
+static void cl_ui_gui_quit_activated(GSimpleAction *action, 
+        GVariant *parameter, gpointer app)
+{
+    g_applicatoin_quit(G_APPLICATION(app));
+}
+
 static void cl_ui_gui_activate(GApplication *app)
 {
     ClientGuiWindow *window;
@@ -143,6 +149,7 @@ static void cl_ui_gui_class_init(ClientGuiClass *class)
 {
     G_APPLICATION_CLASS(class)->activate = cl_ui_gui_activate;
     G_APPLICATION_CLASS(class)->open = cl_ui_gui_open;
+    G_APPLICATOIN_CLASS(class)->startup = cl_Ui_gui_startup;
 }
 
 ClientGui * cl_ui_gui_new()
