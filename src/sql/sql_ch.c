@@ -656,6 +656,39 @@ END:
     return result == SQLV_ENTRY_EXISTS;
 }
 
+int sql_ch_create_group(const char *name, int uid_owner)
+{
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    //TODO: prevent slq injection
+    sprintf(query, "INSERT INTO `groups` VALUES(DEFAULT, '%s', '%d')", name, uid_owner);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+END:
+    mysql_close(con);
+
+    return result;
+}
+
+int sql_ch_add_user_to_group(int gid, int uid)
+{
+    return 0;
+}
+
 void sql_ch_destroy()
 {
     // nothing to do

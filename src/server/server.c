@@ -245,6 +245,16 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
         }
         break;
 
+        case MSG_GROUP_CREATE: {
+            char *name = datapacket_get_string(dp);
+            printf("[info] user %d creates group named %s\n", user->id, name);
+
+            sql_ch_create_group(name, user->id);
+
+            free(name);
+        }
+        break;
+
         default:
             errv("Unknown packet(auth): %d", packet_type);
             break;

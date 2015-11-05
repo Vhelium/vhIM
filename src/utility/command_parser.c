@@ -103,8 +103,13 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
         }
         char *a[] = {host, port};
         exec_cmd(CMD_CONNECT, a);
-        free (host);
-        free (port);
+
+        if (host) {
+            free (host);
+        }
+        if (port) {
+            free (port);
+        }
     }
     /* disconnect */
     else if (strcmp(type, "disconnect") == 0 || strcmp(type, "dc") == 0) {

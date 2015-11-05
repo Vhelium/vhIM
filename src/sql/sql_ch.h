@@ -151,6 +151,10 @@ int sql_ch_delete_friends(int uid_1, int uid_2);
 
 bool sql_ch_user_exists(int uid);
 
+int sql_ch_create_group(const char *name, int uid_owner);
+
+int sql_ch_add_user_to_group(int gid, int uid);
+
 void sql_ch_destroy();
 
 #endif

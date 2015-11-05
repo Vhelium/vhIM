@@ -343,7 +343,9 @@ int cl_exec_remove_friend(int uid)
 
 int cl_exec_group_create(const char *name)
 {
-    //TODO
+    datapacket *dp = datapacket_create(MSG_GROUP_CREATE);
+    datapacket_set_string(dp, name);
+    send_to_server(dp);
     return 0;
 }
 
@@ -397,14 +399,23 @@ void *threaded_connect(void *arg)
 
 static int client_connect(const char *host, int port)
 {
-    if (!host)
-        memcpy(arg_host, HOST, strlen(HOST)+1);
-    else
+    if (!host) { /* no direct argument passed */
+        if(arg_host[0] != 0) { /* argument was passed at startup */
+            /* do nothing as it's already at the right place :) */
+        }
+        else { /* no arguments. Use default host */
+            memcpy(arg_host, HOST, strlen(HOST)+1);
+        }
+    }
+    else { /* direct argument passed */
         memcpy(arg_host, host, strlen(host)+1);
-    if (!port)
+    }
+    if (!port) {
         arg_port = PORT;
-    else
+    }
+    else {
         arg_port = port;
+    }
 
     client_disconnect();
 
@@ -452,14 +463,14 @@ int main(int argc, char *argv[])
             }
         }
         else if (param_count == 0) { /* server */
-            size_t arg_len = strlen(argv[1]);
+            size_t arg_len = strlen(argv[i]);
             if (arg_len < sizeof(arg_host))
-                memcpy(arg_host, argv[1], arg_len+1);
+                memcpy(arg_host, argv[i], arg_len+1);
 
             param_count++;
         }
         else if (param_count == 1) { /* port */
-            arg_port = atoi(argv[2]);
+            arg_port = atoi(argv[i]);
 
             param_count++;
         }
