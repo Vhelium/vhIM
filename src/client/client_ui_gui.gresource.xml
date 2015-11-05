@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+    <gresource prefix="/res/">
+        <file preprocess="xml-stripblanks">client_ui_gui_main.ui</file>
+    </gresource>
+</gresources>
