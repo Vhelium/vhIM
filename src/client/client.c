@@ -466,7 +466,7 @@ int main(int argc, char *argv[])
     }
 
     if (is_gui)
-        cl_ui_gui_start(callbacks, PORT);
+        return cl_ui_gui_start(callbacks, PORT);
     else
         cl_ui_cons_start(callbacks, PORT);
 
