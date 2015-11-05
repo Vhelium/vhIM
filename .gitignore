@@ -12,6 +12,5 @@ vhIM.csr
 # Others
 tags
 src/tags
-src/client/resources.c
 *.taghl
 *.swp

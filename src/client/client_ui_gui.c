@@ -1,7 +1,6 @@
 #include <unistd.h>
 
 #include "client_ui_gui.h"
-#include "client_ui_gui_window.h"
 #include "client_callback.h"
 #include "../network/messagetypes.h"
 
@@ -15,8 +14,6 @@
 #include "client_callback.h"
 
 #include "../server/server_user.h"
-
-G_DEFINE_TYPE(ClientGui, cl_ui_gui, GTK_TYPE_APPLICATION);
 
 static int port_default;
 
@@ -109,59 +106,9 @@ static void cb_friend_offline(int uid)
 {
 }
 
-/* =========================== GUI-SETUP ============================== */
-
-static void cl_ui_gui_init(ClientGui *app)
-{
-}
-
-static void cl_ui_gui_quit_activated(GSimpleAction *action, 
-        GVariant *parameter, gpointer app)
-{
-    g_applicatoin_quit(G_APPLICATION(app));
-}
-
-static void cl_ui_gui_activate(GApplication *app)
-{
-    ClientGuiWindow *window;
-    window = cl_ui_gui_window_new(CLIENT_UI_GUI(app));
-    gtk_window_present(GTK_WINDOW(window));
-}
-
-static void cl_ui_gui_open(GApplication *app, GFile **files
-        , gint n_files, const gchar *hint)
-{
-    ClientGuiWindow *win;
-    GList *windows = gtk_application_get_windows(GTK_APPLICATION(app));
-
-    if (windows)
-        win = CLIENT_UI_GUI_WINDOW(windows->data);
-    else
-        win = cl_ui_gui_window_new(CLIENT_UI_GUI(app));
-
-    for (int i = 0; i < n_files; i++)
-        cl_ui_gui_window_open(win, files[i]);
-
-    gtk_window_present(GTK_WINDOW(win));
-}
-
-static void cl_ui_gui_class_init(ClientGuiClass *class)
-{
-    G_APPLICATION_CLASS(class)->activate = cl_ui_gui_activate;
-    G_APPLICATION_CLASS(class)->open = cl_ui_gui_open;
-    G_APPLICATOIN_CLASS(class)->startup = cl_Ui_gui_startup;
-}
-
-ClientGui * cl_ui_gui_new()
-{
-    return g_object_new(CLIENT_UI_GUI_TYPE, "application-id"
-            , "com.vhelium.vhIM", "flags"
-            , G_APPLICATION_HANDLES_OPEN, NULL);
-}
-
 /* =========================== INITIALIZATION ============================== */
 
-int cl_ui_gui_start(cb_generic_t *cbs, int port)
+void cl_ui_gui_start(cb_generic_t *cbs, int port)
 {
     port_default = port;
 
@@ -179,5 +126,8 @@ int cl_ui_gui_start(cb_generic_t *cbs, int port)
     cbs[MSG_FRIEND_OFFLINE] = (cb_generic_t)NULL;
 
     //TODO: initialize UI and start input thread
-    return g_application_run(G_APPLICATION(cl_ui_gui_new()), 0, NULL);
+    printf("Starting GUI..\n");
+    sleep(1);
+    printf("just kidding!\n");
+    exit(0);
 }
