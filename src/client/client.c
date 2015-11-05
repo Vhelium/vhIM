@@ -456,7 +456,6 @@ int main(int argc, char *argv[])
 {
     bool is_gui = false;
     int i, param_count = 0;
-    int ret = 0;
     for(i = 1; i < argc; ++i) {
         if (argv[i][0] == '-' && argv[i][1] == '-') { /* modifier */
             if(strcmp(&argv[i][2], "gui") == 0) { /* gui */
@@ -477,12 +476,10 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (is_gui) {
-        ret = cl_ui_gui_start(callbacks, PORT);
-    }
-    else {
+    if (is_gui)
+        cl_ui_gui_start(callbacks, PORT);
+    else
         cl_ui_cons_start(callbacks, PORT);
-    }
 
     /* destroy the connection if it is still active. */
     if (cl_get_is_connected_synced()) {
@@ -490,5 +487,6 @@ int main(int argc, char *argv[])
     }
     
     pthread_mutex_destroy(&mutex_connected);
-    return ret;
+    pthread_exit(NULL);
+    return 0;
 }
