@@ -149,12 +149,16 @@ int sql_ch_get_friends(int uid_from, struct vstack *friends_out);
  */
 int sql_ch_delete_friends(int uid_1, int uid_2);
 
+/* returns if user with id `uid` exists */
 bool sql_ch_user_exists(int uid);
 
+/* creates new group with name `name` and owner `uid_owner` */
 int sql_ch_create_group(const char *name, int uid_owner);
 
+/* adds user to group, if not already in it */
 int sql_ch_add_user_to_group(int gid, int uid);
 
+/* clean up */
 void sql_ch_destroy();
 
 #endif
