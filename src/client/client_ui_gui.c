@@ -108,7 +108,7 @@ static void cb_friend_offline(int uid)
 
 /* =========================== INITIALIZATION ============================== */
 
-void cl_ui_gui_start(cb_generic_t *cbs, int port)
+int cl_ui_gui_start(cb_generic_t *cbs, int port)
 {
     port_default = port;
 
@@ -130,4 +130,6 @@ void cl_ui_gui_start(cb_generic_t *cbs, int port)
     sleep(1);
     printf("just kidding!\n");
     exit(0);
+
+    return 0;
 }
