@@ -684,9 +684,94 @@ END:
     return result;
 }
 
+bool sql_ch_is_group_owner(int gid, int uid)
+{
+    //TODO
+    return true;
+}
+
 int sql_ch_add_user_to_group(int gid, int uid)
 {
-    return 0;
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    /* check if grp exists */
+    sprintf(query, "SELECT EXISTS(SELECT 1 FROM `groups` WHERE `id` = '%d')",
+            gid);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    if ((row = mysql_fetch_row(res)) != NULL) {
+        if (row[0][0] == '0') {
+            result = SQLV_NOPE;
+            goto QUERY_FAIL;
+        }
+    }
+    else {
+        result = SQLV_NOPE;
+        goto QUERY_FAIL;
+    }
+
+    mysql_free_result(res);
+
+    /* check if user is already in this group */
+    sprintf(query, "SELECT EXISTS(SELECT 1 FROM `users_to_group` WHERE `user_id` = '%d' AND `group_id` = '%d')",
+            uid, gid);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    if ((row = mysql_fetch_row(res)) != NULL) {
+        if (row[0][0] == '1') {
+            result = SQLV_ENTRY_EXISTS;
+            goto QUERY_FAIL;
+        }
+    }
+    else {
+        result = SQLV_NOPE;
+        goto QUERY_FAIL;
+    }
+
+QUERY_FAIL:
+    mysql_free_result(res);
+
+    if (result == SQLV_SUCCESS) { /* not already in group */
+        //TODO: prevent slq injection
+        sprintf(query, "INSERT INTO `users_to_group` VALUES(DEFAULT, '%d', '%d')",
+                uid, gid);
+
+        if (mysql_query(con, query)) {
+            errv("%s\n", mysql_error(con));
+            result = SQLV_CONNECTION_ERROR;
+            goto END;
+        }
+    }
+    else
+        goto END;
+
+END:
+    mysql_close(con);
+
+    return result;
 }
 
 void sql_ch_destroy()

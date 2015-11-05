@@ -164,6 +164,22 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
             ret = 2;
         free(name);
     }
+    else if (strcmp(type, "gadd") == 0) {
+        char *gid;
+        if (next_word(&cmd, &gid)) {
+            char *uid;
+            if(next_word(&cmd, &uid)) {
+                char *a[] = {gid, uid};
+                exec_cmd(MSG_GROUP_ADD_USER, a);
+            }
+            else
+                ret = 2;
+            free(uid);
+        }
+        else
+            ret = 2;
+        free (gid);
+    }
     else if (strcmp(type, "gdelete") == 0) {
         char *gid= NULL;
         if (next_word(&cmd, &gid)) {

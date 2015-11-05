@@ -255,6 +255,17 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
         }
         break;
 
+        case MSG_GROUP_ADD_USER: {
+            int gid = datapacket_get_int(dp);
+            int uid = datapacket_get_int(dp);
+            printf("[info] user %d adds user %d to group %d\n", user->id, uid, gid);
+
+            if (sql_ch_is_group_owner(gid, uid)) {
+                sql_ch_add_user_to_group(gid, uid);
+            }
+        }
+        break;
+
         default:
             errv("Unknown packet(auth): %d", packet_type);
             break;

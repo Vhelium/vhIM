@@ -31,6 +31,8 @@ int cl_exec_remove_friend(int uid);
 
 int cl_exec_group_create(const char *name);
 
-int cl_exec_group_delete(int uid);
+int cl_exec_group_delete(int gid);
+
+int cl_exec_group_add_user(int gid, int uid);
 
 #endif

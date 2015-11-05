@@ -155,8 +155,11 @@ bool sql_ch_user_exists(int uid);
 /* creates new group with name `name` and owner `uid_owner` */
 int sql_ch_create_group(const char *name, int uid_owner);
 
-/* adds user to group, if not already in it */
+/* adds user to group, if not already in it.
+ * will NOT check if user is allowed to do so. check beforehand! */
 int sql_ch_add_user_to_group(int gid, int uid);
+
+bool sql_ch_is_group_owner(int gid, int uid);
 
 /* clean up */
 void sql_ch_destroy();
