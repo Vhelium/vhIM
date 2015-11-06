@@ -106,6 +106,36 @@ static void cb_friend_offline(int uid)
 {
 }
 
+/* =========================== GUI-SETUP ============================== */
+
+gboolean init_app(ClientGuiApp *app)
+{
+    GtkBuilder *builder;
+    GError *err = NULL;
+
+    builder = gtk_builder_new();
+    // Load the GUI from the .ui file, exiting on error.
+    if(gtk_builder_add_from_resource(builder, "/res/client_ui_gui_main.ui", &err) == 0){
+        // TODO: print error.
+        g_error_free(err);
+        return FALSE;
+    }
+
+    app->main_window = GTK_WIDGET(gtk_builder_get_object(builder, "main_window"));
+    app->menu_bar = GTK_WIDGET(gtk_builder_get_object(builder, "menu_bar"));
+    app->status_bar = GTK_WIDGET(gtk_builder_get_object(builder, "status_bar"));
+
+    // Clean up after using the builder.
+    gtk_builder_connect_signals(builder, app);
+    g_object_unref(G_OBJECT(builder));
+    
+    // Set the status bar context id.
+    app->status_bar_context_id = gtk_statusbar_get_context_id(GTK_STATUSBAR(
+                app->status_bar), "vhIM client (gui running)");
+
+    return TRUE; 
+}
+
 /* =========================== INITIALIZATION ============================== */
 
 int cl_ui_gui_start(cb_generic_t *cbs, int port)
@@ -125,11 +155,16 @@ int cl_ui_gui_start(cb_generic_t *cbs, int port)
     cbs[MSG_FRIEND_ONLINE] = (cb_generic_t)NULL;
     cbs[MSG_FRIEND_OFFLINE] = (cb_generic_t)NULL;
 
-    //TODO: initialize UI and start input thread
-    printf("Starting GUI..\n");
-    sleep(1);
-    printf("just kidding!\n");
-    exit(0);
-
-    return 0;
+    // Initialize the GUI.
+    ClientGuiApp *client;
+    client = g_slice_new(ClientGuiApp);
+    // Initialize the gtk environment. No arguments are getting passed.
+    gtk_init(NULL, NULL);
+    // Try to initialize the application, return 1 on failure.
+    if(init_app(client) == FALSE) return 1;
+    gtk_widget_show(client->main_window);
+    // Main GTK-Appliacation loop.
+    gtk_main();
+    g_slice_free(ClientGuiApp, client); // Free residual memory.
+    return 0; // Successfull execution.
 }
