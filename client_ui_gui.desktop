@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=vhIM Client
+Exec=/home/philipp/Documents/Coding-Projects/vhIM/bin/client --gui
+Comment=Client to the vhelium Instant Messenger

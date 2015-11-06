@@ -1,7 +1,6 @@
 #include <unistd.h>
 
 #include "client_ui_gui.h"
-#include "client_ui_gui_window.h"
 #include "client_callback.h"
 #include "../network/messagetypes.h"
 
@@ -15,8 +14,6 @@
 #include "client_callback.h"
 
 #include "../server/server_user.h"
-
-G_DEFINE_TYPE(ClientGui, cl_ui_gui, GTK_TYPE_APPLICATION);
 
 static int port_default;
 
@@ -111,52 +108,32 @@ static void cb_friend_offline(int uid)
 
 /* =========================== GUI-SETUP ============================== */
 
-static void cl_ui_gui_init(ClientGui *app)
+gboolean init_app(ClientGuiApp *app)
 {
-}
+    GtkBuilder *builder;
+    GError *err = NULL;
 
-static void cl_ui_gui_quit_activated(GSimpleAction *action, 
-        GVariant *parameter, gpointer app)
-{
-    g_applicatoin_quit(G_APPLICATION(app));
-}
+    builder = gtk_builder_new();
+    // Load the GUI from the .ui file, exiting on error.
+    if(gtk_builder_add_from_resource(builder, "/res/client_ui_gui_main.ui", &err) == 0){
+        // TODO: print error.
+        g_error_free(err);
+        return FALSE;
+    }
 
-static void cl_ui_gui_activate(GApplication *app)
-{
-    ClientGuiWindow *window;
-    window = cl_ui_gui_window_new(CLIENT_UI_GUI(app));
-    gtk_window_present(GTK_WINDOW(window));
-}
+    app->main_window = GTK_WIDGET(gtk_builder_get_object(builder, "main_window"));
+    app->menu_bar = GTK_WIDGET(gtk_builder_get_object(builder, "menu_bar"));
+    app->status_bar = GTK_WIDGET(gtk_builder_get_object(builder, "status_bar"));
 
-static void cl_ui_gui_open(GApplication *app, GFile **files
-        , gint n_files, const gchar *hint)
-{
-    ClientGuiWindow *win;
-    GList *windows = gtk_application_get_windows(GTK_APPLICATION(app));
+    // Clean up after using the builder.
+    gtk_builder_connect_signals(builder, app);
+    g_object_unref(G_OBJECT(builder));
+    
+    // Set the status bar context id.
+    app->status_bar_context_id = gtk_statusbar_get_context_id(GTK_STATUSBAR(
+                app->status_bar), "vhIM client (gui running)");
 
-    if (windows)
-        win = CLIENT_UI_GUI_WINDOW(windows->data);
-    else
-        win = cl_ui_gui_window_new(CLIENT_UI_GUI(app));
-
-    for (int i = 0; i < n_files; i++)
-        cl_ui_gui_window_open(win, files[i]);
-
-    gtk_window_present(GTK_WINDOW(win));
-}
-
-static void cl_ui_gui_class_init(ClientGuiClass *class)
-{
-    G_APPLICATION_CLASS(class)->activate = cl_ui_gui_activate;
-    G_APPLICATION_CLASS(class)->open = cl_ui_gui_open;
-    G_APPLICATOIN_CLASS(class)->startup = cl_Ui_gui_startup;
-}
-
-ClientGui * cl_ui_gui_new()
-{
-    return g_object_new(CLIENT_UI_GUI_TYPE, "application-id"
-            , "com.vhelium.vhIM", "flags"
-            , G_APPLICATION_HANDLES_OPEN, NULL);
+    return TRUE; 
 }
 
 /* =========================== INITIALIZATION ============================== */
@@ -178,6 +155,16 @@ int cl_ui_gui_start(cb_generic_t *cbs, int port)
     cbs[MSG_FRIEND_ONLINE] = (cb_generic_t)NULL;
     cbs[MSG_FRIEND_OFFLINE] = (cb_generic_t)NULL;
 
-    //TODO: initialize UI and start input thread
-    return g_application_run(G_APPLICATION(cl_ui_gui_new()), 0, NULL);
+    // Initialize the GUI.
+    ClientGuiApp *client;
+    client = g_slice_new(ClientGuiApp);
+    // Initialize the gtk environment. No arguments are getting passed.
+    gtk_init(NULL, NULL);
+    // Try to initialize the application, return 1 on failure.
+    if(init_app(client) == FALSE) return 1;
+    gtk_widget_show(client->main_window);
+    // Main GTK-Appliacation loop.
+    gtk_main();
+    g_slice_free(ClientGuiApp, client); // Free residual memory.
+    return 0; // Successfull execution.
 }

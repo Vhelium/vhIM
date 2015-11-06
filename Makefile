@@ -11,7 +11,7 @@ SRC_SERVER:=$(filter-out src/test.c, $(shell find src -type f -name *.c | grep -
 SRC_CLIENT:=$(filter-out src/test.c, $(shell find src -type f -name *.c | grep -v server/ | grep -v sql/))
 SRC_TEST:=$(shell find src -type f -name *.c | grep -v server/ | grep -v client/) 
 
-all: clean make_resources server client test
+all: clean make_resources server client
 
 make_resources:
 	glib-compile-resources src/client/client_ui_gui.gresource.xml \
