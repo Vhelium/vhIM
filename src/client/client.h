@@ -35,4 +35,6 @@ int cl_exec_group_delete(int gid);
 
 int cl_exec_group_add_user(int gid, int uid);
 
+int cl_exec_group_send(int gid, const char *msg);
+
 #endif

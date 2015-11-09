@@ -154,6 +154,7 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
             ret = 2;
         free(user);
     }
+    /* group create */
     else if (strcmp(type, "gcreate") == 0) {
         char *name = NULL;
         if (next_word(&cmd, &name)) {
@@ -164,6 +165,7 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
             ret = 2;
         free(name);
     }
+    /* group add user */
     else if (strcmp(type, "gadd") == 0) {
         char *gid;
         if (next_word(&cmd, &gid)) {
@@ -180,6 +182,7 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
             ret = 2;
         free (gid);
     }
+    /* group delete */
     else if (strcmp(type, "gdelete") == 0) {
         char *gid= NULL;
         if (next_word(&cmd, &gid)) {
@@ -189,6 +192,23 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
         else
             ret = 2;
         free(gid);
+    }
+    /* group send */
+    else if (strcmp(type, "g") == 0) {
+        char *group = NULL;
+        if (next_word(&cmd, &group)) {
+            char *txt = NULL;
+            if (next_word(&cmd, &txt)) {
+                char *a[] = {group, txt};
+                exec_cmd(MSG_GROUP_SEND, a);
+            }
+            else
+                ret = 2;
+            free(txt);
+        }
+        else
+            ret = 2;
+        free(group);
     }
     /* invalid command */
     else

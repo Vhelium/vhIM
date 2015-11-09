@@ -364,6 +364,15 @@ int cl_exec_group_add_user(int gid, int uid)
     return 0;
 }
 
+int cl_exec_group_send(int gid, const char *msg)
+{
+    datapacket *dp = datapacket_create(MSG_GROUP_SEND);
+    datapacket_set_int(dp, gid);
+    datapacket_set_string(dp, msg);
+    send_to_server(dp);
+    return 0;
+}
+
 /* ============== THREADING ========================================= */
 
 static bool is_connected = false;

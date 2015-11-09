@@ -17,11 +17,13 @@
 #include "../network/datapacket.h"
 #include "../network/messagetypes.h"
 #include "server_user.h"
+#include "server_group.h"
 #include "../utility/vstack.h"
 
 #define PORT "55099"
 
 static gdsl_rbtree_t users;
+static gdsl_rbtree_t groups;
 
 // Callback Functions
 static void cb_cl_cntd(struct server_client *sc);
@@ -35,6 +37,10 @@ static void remove_server_user_by_id(int id);
 static void remove_server_user_by_struct(struct server_user *su);
 static size_t get_user_count();
 static void write_usernames_to_dp(datapacket *dp);
+
+// User online/offline
+static void on_user_online(server_user user);
+static void on_user_offline(server_user user);
 
 // User Management
 static bool is_user_logged_in(char *uname);
@@ -52,6 +58,7 @@ static bool users_are_friends(int uid_from, int uid_to);
 static int send_to_client(SSL *ssl, datapacket *dp);
 static int send_to_user(struct server_user *u_to, datapacket *dp);
 static int send_to_friends(struct server_user *u_from, datapacket *dp);
+static int send_to_group(struct server_group *g_to, datapacket *dp);
 static int send_to_all(SSL *ssl_from, datapacket *dp);
 
 // compare [server_user] with [server_user]
@@ -66,9 +73,16 @@ static long int compare_user_id_directly(const gdsl_element_t E, void *VALUE)
     return ((struct server_user *)E)->id - *((int *)VALUE);
 }
 
+// compare [server_group] with [server_group]
+static long int compare_group_id(const gdsl_element_t E, void *VALUE)
+{
+    return ((struct server_group *)E)->id - ((struct server_group *)VALUE)->id;
+}
+
 static void server_init()
 {
     users = gdsl_rbtree_alloc("USERS", NULL, NULL, &compare_user_id);
+    groups = gdsl_rbtree_alloc("GROUPS", NULL, NULL, &compare_group_id);
 }
 
 int main(void)
@@ -263,6 +277,26 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
             if (sql_ch_is_group_owner(gid, uid)) {
                 sql_ch_add_user_to_group(gid, uid);
             }
+        }
+        break;
+        
+        case MSG_GROUP_SEND: {
+            int gid = datapacket_get_int(dp);
+            struct server_group *group = NULL; //TODO
+            if (group != NULL) {
+                char *msg = datapacket_get_string(dp);
+                printf("U->G [%d->%d]: %s\n",user->id, gid, msg);
+
+                datapacket *answer = datapacket_create(MSG_GROUP_SEND);
+                datapacket_set_int(answer, gid);
+                datapacket_set_string(answer, msg);
+
+                send_to_group(group, answer);
+
+                free(msg);
+            }
+            else
+                printf("gsend: group not found: %d\n", gid);
         }
         break;
 
@@ -664,6 +698,12 @@ static int send_to_friends(struct server_user *u_from, datapacket *dp)
     return 0;
 }
 
+static int send_to_group(struct server_group *g_to, datapacket *dp)
+{
+    //TODO
+    return 0;
+}
+
 struct sender_triplet {
         SSL *ssl;
         void *data;
@@ -752,4 +792,18 @@ static int map_write_usernames(const gdsl_element_t e, gdsl_location_t l, void *
 static void write_usernames_to_dp(datapacket *dp)
 {
     gdsl_rbtree_map_infix(users, &map_write_usernames, dp);
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
+ * User Online Offline                                         *
+\* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+static void on_user_online(server_user user)
+{
+
+}
+
+static void on_user_offline(server_user user)
+{
+
 }

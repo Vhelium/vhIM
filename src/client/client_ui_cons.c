@@ -216,6 +216,16 @@ static int execute_command(int type, char *argv[])
         }
         break;
 
+        case MSG_GROUP_SEND: {
+            /* check if passed argument is a number */
+            if (!is_decimal_number(argv[0]))
+                return 3;
+            int gid = atoi(argv[0]);
+
+            cl_exec_group_send(gid, argv[1]);
+        }
+        break;
+
         case CMD_HELP: {
             printf("Go fuck yourself.\n");
         }
