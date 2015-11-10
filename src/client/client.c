@@ -399,7 +399,7 @@ void *threaded_connect(void *arg)
     client_ch_listen(&process_packet);
 
     client_ch_destroy();
-    printf("disconnected.\n");
+    printf("disconnected.\n"); // TODO: Obnoxious Console Output
 
     set_is_connected_synced(false);
 

@@ -1,5 +1,7 @@
 #include <unistd.h>
 
+#include <gdk/gdkkeysyms.h>
+
 #include "client_ui_gui.h"
 #include "client_callback.h"
 #include "../network/messagetypes.h"
@@ -16,6 +18,7 @@
 #include "../server/server_user.h"
 
 static int port_default;
+static ClientGuiApp *client;
 
 static void cb_welcome (const char *msg)
 {
@@ -136,8 +139,7 @@ static int execute_command(int type, char *argv[])
             if(argv[1] != NULL && !is_decimal_number(argv[1])) return 3;
             int port = argv[1] != NULL ? atoi(argv[1]) : port_default;
             if(cl_exec_connect(argv[0], port)){
-                // TODO: Print error connecting to host.
-                g_print("Error connecting to host.\n");
+                gui_print("Error connecting to host.\n");
                 exit(1);
             }
             break;
@@ -148,8 +150,7 @@ static int execute_command(int type, char *argv[])
             if(is_decimal_number(argv[0]) && is_decimal_number(argv[1]))
                 cl_exec_grant_privileges(atoi(argv[0]), atoi(argv[1]));
             else
-                // TODO: Print error invalid arguments
-                g_print("Error, invalid arguments.\n");
+                gui_print("Error, invalid arguments.\n");
             break;
         case MSG_ADD_FRIEND:
             if(is_decimal_number(argv[0])) cl_exec_add_friend(atoi(argv[0]));
@@ -167,16 +168,14 @@ static int execute_command(int type, char *argv[])
             if(is_decimal_number(argv[0]) && is_decimal_number(argv[1]))
                 cl_exec_group_add_user(atoi(argv[0]), atoi(argv[1]));
             else
-                // TODO: Print error invalid arguments.
-                g_print("Error, invalid arguments.\n");
+                gui_print("Error, invalid arguments.\n");
             break;
         case CMD_HELP:
             // TODO: Handle help command.
-            g_print("Go fuck yourself.\n");
+            gui_print("Go fuck yourself.\n");
             break;
         default:
-            // TODO: Handle invalid command.
-            g_print("Invalid command.\n");
+            gui_print("Invalid command.\n");
             return 1;
     }
     return 0;
@@ -197,11 +196,37 @@ static void process_input(char *input, int length)
 
 /* =========================== GUI-HANDLERS =========================== */
 
-void send_button_clicked(GtkWidget *button, ClientGuiApp *app){
+void gui_print(char *msg)
+{
+    if(!msg) return;
+    GtkTextBuffer *buff = gtk_text_view_get_buffer(client->output);
+    GtkTextIter end;
+    gtk_text_buffer_get_end_iter(buff, &end);
+    gtk_text_buffer_insert(buff, &end, msg, -1);
+    gtk_text_view_set_buffer(client->output, buff);
+}
+
+gboolean on_key_press(GtkWidget *widget, GdkEventKey *pKey, ClientGuiApp *app)
+{
+    // Check if the enter key was pressed.
+    // If yes, do not propagate the key event (block it by returning true).
+    if(pKey->type == GDK_KEY_PRESS && pKey->keyval == GDK_KEY_Return){
+        send_button_clicked(NULL, app);
+        return TRUE;
+    }
+    // The key pressed was not enter. Propagate it.
+    return GDK_EVENT_PROPAGATE;
+}
+
+void send_button_clicked(GtkWidget *button, ClientGuiApp *app)
+{
+    // Read the text from the input field.
     GtkTextIter start, end;
     GtkTextBuffer *buff = gtk_text_view_get_buffer(app->input);
     gtk_text_buffer_get_bounds(buff, &start, &end);
-    process_input(gtk_text_buffer_get_text(buff, &start, &end, FALSE), gtk_text_iter_get_offset(&end) + 1);
+    gchar *input = gtk_text_buffer_get_text(buff, &start, &end, FALSE);
+    process_input(input, gtk_text_iter_get_offset(&end) + 1);
+    g_free(input); // XXX: Safe?
 
     // Clear the input text field.
     gtk_text_buffer_set_text(buff, "", -1);
@@ -234,6 +259,8 @@ gboolean init_app(ClientGuiApp *app)
     // --------- Set action handlers ----------
     // Input-Send-Button:
     g_signal_connect(app->send_button, "clicked", G_CALLBACK(send_button_clicked), app);
+    // Make input react to enter key press.
+    g_signal_connect(app->input, "key_press_event", G_CALLBACK(on_key_press), app);
 
     // Clean up after using the builder.
     gtk_builder_connect_signals(builder, app);
@@ -252,21 +279,20 @@ int cl_ui_gui_start(cb_generic_t *cbs, int port)
 {
     port_default = port;
 
-    // TODO: initialize callbacks
-    cbs[MSG_WELCOME] = (cb_generic_t)NULL;
-    cbs[MSG_AUTH_FAILED] = (cb_generic_t)NULL;
-    cbs[MSG_BROADCAST] = (cb_generic_t)NULL;
-    cbs[MSG_SYSTEM_MSG] = (cb_generic_t)NULL;
-    cbs[MSG_REGISTR_SUCCESSFUL] = (cb_generic_t)NULL;
-    cbs[MSG_REGISTR_FAILED] = (cb_generic_t)NULL;
-    cbs[MSG_WHO] = (cb_generic_t)NULL;
-    cbs[MSG_FRIENDS] = (cb_generic_t)NULL;
-    cbs[MSG_REMOVE_FRIEND] = (cb_generic_t)NULL;
-    cbs[MSG_FRIEND_ONLINE] = (cb_generic_t)NULL;
-    cbs[MSG_FRIEND_OFFLINE] = (cb_generic_t)NULL;
+    // Initialize callbacks
+    cbs[MSG_WELCOME] = (cb_generic_t)&cb_welcome;
+    cbs[MSG_AUTH_FAILED] = (cb_generic_t)&cb_auth_failed;
+    cbs[MSG_BROADCAST] = (cb_generic_t)&cb_broadcast;
+    cbs[MSG_SYSTEM_MSG] = (cb_generic_t)&cb_system_msg;
+    cbs[MSG_REGISTR_SUCCESSFUL] = (cb_generic_t)&cb_registr_successful;
+    cbs[MSG_REGISTR_FAILED] = (cb_generic_t)&cb_registr_failed;
+    cbs[MSG_WHO] = (cb_generic_t)&cb_who;
+    cbs[MSG_FRIENDS] = (cb_generic_t)&cb_friends;
+    cbs[MSG_REMOVE_FRIEND] = (cb_generic_t)&cb_remove_friend;
+    cbs[MSG_FRIEND_ONLINE] = (cb_generic_t)&cb_friend_online;
+    cbs[MSG_FRIEND_OFFLINE] = (cb_generic_t)&cb_friend_offline;
 
     // Initialize the GUI.
-    ClientGuiApp *client;
     client = g_slice_new(ClientGuiApp);
     // Initialize the gtk environment. No arguments are getting passed.
     gtk_init(NULL, NULL);

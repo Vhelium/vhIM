@@ -23,6 +23,52 @@ typedef struct ClientGuiApp {
 /* ================== Functions ================ */
 
 /*
+ * Function: gui_print
+ * -------------------
+ * Description:
+ * Print a standard text output to the gui's
+ * output text field.
+ *
+ * Arguments: msg - The message to print.
+ *
+ * Returns: void
+ */
+void gui_print(char *msg);
+
+/*
+ * Function: send_button_clicked
+ * -----------------------------
+ * Description:
+ * Generate the send-event. This reads the input from
+ * the input text field and processes it, before
+ * clearing out the input field.
+ *
+ * Arguments: button - Pointer to the pressed button.
+ *            app - Pointer to the application.
+ *
+ * Returns: void
+ */
+void send_button_clicked(GtkWidget *button, ClientGuiApp *app);
+
+/*
+ * Function: on_key_press
+ * ----------------------
+ * Description:
+ * Check if a pressed key (in a text view) is the 
+ * enter key or not. If it is the enter key, do not
+ * propagate the input, and instead call the
+ * send_button_clicked method to process the input.
+ *
+ * Arguments: widget - The text field.
+ *            pkey - The key press-event.
+ *            app - Pointer to the application.
+ *
+ * Returns: TRUE - Do not propagate the event.
+ *          GDK_EVENT_PROPAGATE - Propagate the event.
+ */
+gboolean on_key_press(GtkWidget *widget, GdkEventKey *pkey, ClientGuiApp *app);
+
+/*
  * Function: init_app
  * ------------------
  * Description:
