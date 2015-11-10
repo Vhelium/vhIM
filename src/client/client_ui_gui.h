@@ -15,6 +15,8 @@
  */
 typedef struct ClientGuiApp {
     GtkWidget *main_window, *menu_bar, *status_bar;
+    GtkTextView *output, *input; 
+    GtkButton *send_button;
     guint status_bar_context_id;
 } ClientGuiApp;
 

@@ -106,6 +106,108 @@ static void cb_friend_offline(int uid)
 {
 }
 
+static int execute_command(int type, char *argv[])
+{
+    switch(type){
+        case MSG_CMD_KICK_ID:
+            if(!is_decimal_number(argv[0])) return 3;
+            cl_exec_kick(atoi(argv[0]));
+            break;
+        case MSG_WHISPER:
+            if(!is_decimal_number(argv[0])) return 3;
+            cl_exec_whisper(atoi(argv[0]), argv[1]);
+            break;
+        case MSG_REQ_REGISTER:
+            cl_exec_req_register(argv[0], argv[1]);
+            break;
+        case MSG_REQ_LOGIN:
+            cl_exec_req_login(argv[0], argv[1]);
+            break;
+        case MSG_LOGOUT:
+            cl_exec_logout();
+            break;
+        case MSG_WHO:
+            cl_exec_who();
+            break;
+        case MSG_FRIENDS:
+            cl_exec_friends();
+            break;
+        case CMD_CONNECT:
+            if(argv[1] != NULL && !is_decimal_number(argv[1])) return 3;
+            int port = argv[1] != NULL ? atoi(argv[1]) : port_default;
+            if(cl_exec_connect(argv[0], port)){
+                // TODO: Print error connecting to host.
+                g_print("Error connecting to host.\n");
+                exit(1);
+            }
+            break;
+        case CMD_DISCONNECT:
+            cl_exec_disconnect();
+            break;
+        case MSG_GRANT_PRIVILEGES:
+            if(is_decimal_number(argv[0]) && is_decimal_number(argv[1]))
+                cl_exec_grant_privileges(atoi(argv[0]), atoi(argv[1]));
+            else
+                // TODO: Print error invalid arguments
+                g_print("Error, invalid arguments.\n");
+            break;
+        case MSG_ADD_FRIEND:
+            if(is_decimal_number(argv[0])) cl_exec_add_friend(atoi(argv[0]));
+            break;
+        case MSG_REMOVE_FRIEND:
+            if(is_decimal_number(argv[0])) cl_exec_remove_friend(atoi(argv[0]));
+            break;
+        case MSG_GROUP_CREATE:
+            cl_exec_group_create(argv[0]);
+            break;
+        case MSG_GROUP_DELETE:
+            if(is_decimal_number(argv[0])) cl_exec_group_delete(atoi(argv[0]));
+            break;
+        case MSG_GROUP_ADD_USER:
+            if(is_decimal_number(argv[0]) && is_decimal_number(argv[1]))
+                cl_exec_group_add_user(atoi(argv[0]), atoi(argv[1]));
+            else
+                // TODO: Print error invalid arguments.
+                g_print("Error, invalid arguments.\n");
+            break;
+        case CMD_HELP:
+            // TODO: Handle help command.
+            g_print("Go fuck yourself.\n");
+            break;
+        default:
+            // TODO: Handle invalid command.
+            g_print("Invalid command.\n");
+            return 1;
+    }
+    return 0;
+}
+
+static void process_input(char *input, int length)
+{
+    if(length > 0){
+        if(input[0] == '/'){
+            process_command(input, &execute_command);
+        }else if(cl_get_is_connected_synced()){
+            cl_exec_broadcast(input);
+        }else{
+            // TODO: Return error: Not connected to server
+        }
+    }
+}
+
+/* =========================== GUI-HANDLERS =========================== */
+
+void send_button_clicked(GtkWidget *button, ClientGuiApp *app){
+    GtkTextIter start, end;
+    GtkTextBuffer *buff = gtk_text_view_get_buffer(app->input);
+    gtk_text_buffer_get_bounds(buff, &start, &end);
+    process_input(gtk_text_buffer_get_text(buff, &start, &end, FALSE), gtk_text_iter_get_offset(&end) + 1);
+
+    // Clear the input text field.
+    gtk_text_buffer_set_text(buff, "", -1);
+    gtk_text_view_set_buffer(app->input, buff);
+}
+
 /* =========================== GUI-SETUP ============================== */
 
 gboolean init_app(ClientGuiApp *app)
@@ -121,9 +223,17 @@ gboolean init_app(ClientGuiApp *app)
         return FALSE;
     }
 
+    // Grab and assign all necessary gtk widgets.
     app->main_window = GTK_WIDGET(gtk_builder_get_object(builder, "main_window"));
     app->menu_bar = GTK_WIDGET(gtk_builder_get_object(builder, "menu_bar"));
+    app->output = GTK_TEXT_VIEW(gtk_builder_get_object(builder, "output_text_view"));
+    app->input = GTK_TEXT_VIEW(gtk_builder_get_object(builder, "input_text_view"));
+    app->send_button = GTK_BUTTON(gtk_builder_get_object(builder, "input_send_button"));
     app->status_bar = GTK_WIDGET(gtk_builder_get_object(builder, "status_bar"));
+
+    // --------- Set action handlers ----------
+    // Input-Send-Button:
+    g_signal_connect(app->send_button, "clicked", G_CALLBACK(send_button_clicked), app);
 
     // Clean up after using the builder.
     gtk_builder_connect_signals(builder, app);
