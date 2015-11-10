@@ -257,7 +257,6 @@ static void process_packet(void *sender, byte *data)
 
             char *msg = "----------------";
             ((cb_group_dump_active_t)callbacks[MSG_DUMP_ACTIVE_GROUPS])(msg);
-            free(msg);
         }
         break;
 
