@@ -231,6 +231,36 @@ static void process_packet(void *sender, byte *data)
         }
         break;
 
+        case MSG_DUMP_ACTIVE_GROUPS: {
+            printf("\nActive Groups:\n\n");
+            int group_count = datapacket_get_int(dp);
+            int i, j;
+            /* print group infos */
+            for (i = 0; i < group_count; ++i) {
+                int gid = datapacket_get_int(dp);
+                char *name = datapacket_get_string(dp);
+                int owner_id = datapacket_get_int(dp);
+
+                int member_count = datapacket_get_int(dp);
+                printf("   Group(%d) %s, owner: %d:\n", gid, name, owner_id);
+
+                /* print member infos of that group */
+                for (j = 0; j < member_count; ++j) {
+                    int uid = datapacket_get_int(dp);
+                    printf("      user(%d)\n", uid);
+                }
+
+                printf("\n");
+
+                free(name);
+            }
+
+            char *msg = "----------------";
+            ((cb_group_dump_active_t)callbacks[MSG_DUMP_ACTIVE_GROUPS])(msg);
+            free(msg);
+        }
+        break;
+
         default:
             errv("Unknown packet: %d\n", packet_type);
             break;
@@ -369,6 +399,13 @@ int cl_exec_group_send(int gid, const char *msg)
     datapacket *dp = datapacket_create(MSG_GROUP_SEND);
     datapacket_set_int(dp, gid);
     datapacket_set_string(dp, msg);
+    send_to_server(dp);
+    return 0;
+}
+
+int cl_exec_group_dump_active(void)
+{
+    datapacket *dp = datapacket_create(MSG_DUMP_ACTIVE_GROUPS);
     send_to_server(dp);
     return 0;
 }

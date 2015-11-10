@@ -16,5 +16,6 @@ typedef void (*cb_friends_t)(struct vstack *on, struct vstack *off, struct vstac
 typedef void (*cb_remove_friend_t)(int uid);
 typedef void (*cb_friend_online_t)(int uid, const char *name);
 typedef void (*cb_friend_offline_t)(int uid);
+typedef void (*cb_group_dump_active_t)(const char *msg);
 
 #endif

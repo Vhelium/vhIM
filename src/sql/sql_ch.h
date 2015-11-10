@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 #include "../utility/vstack.h"
+#include "../utility/vistack.h"
+#include "../server/server_group.h"
 
 #define SQLV_SUCCESS 0
 #define SQLV_FAILURE 1
@@ -153,13 +155,20 @@ int sql_ch_delete_friends(int uid_1, int uid_2);
 bool sql_ch_user_exists(int uid);
 
 /* creates new group with name `name` and owner `uid_owner` */
-int sql_ch_create_group(const char *name, int uid_owner);
+int sql_ch_create_group(const char *name, int uid_owner, int *gid);
 
 /* adds user to group, if not already in it.
  * will NOT check if user is allowed to do so. check beforehand! */
 int sql_ch_add_user_to_group(int gid, int uid);
 
+/* returns true if user with id `uid` is owner of group `gid` */
 bool sql_ch_is_group_owner(int gid, int uid);
+
+/* returns a stack with all IDs of groups the user is assigned to */
+int sql_ch_get_groups_of_user(int uid, struct vistack **g);
+
+/* fetches group info and fills it into group struct */
+int sql_ch_initialize_group(int gid, struct server_group *grp);
 
 /* clean up */
 void sql_ch_destroy();

@@ -104,6 +104,11 @@ static void cb_friend_offline(int uid)
     printf("Friend with id %d went offline.\n", uid);
 }
 
+static void cb_group_dump_active(const char *msg)
+{
+    printf("%s\n\n", msg);
+}
+
 /* ========================================================================= */
 
 static int execute_command(int type, char *argv[])
@@ -226,6 +231,11 @@ static int execute_command(int type, char *argv[])
         }
         break;
 
+        case MSG_DUMP_ACTIVE_GROUPS: {
+            cl_exec_group_dump_active();
+        }
+        break;
+
         case CMD_HELP: {
             printf("Go fuck yourself.\n");
         }
@@ -277,6 +287,7 @@ void cl_ui_cons_start(cb_generic_t *cbs, int port)
     cbs[MSG_REMOVE_FRIEND] = (cb_generic_t)&cb_remove_friend;
     cbs[MSG_FRIEND_ONLINE] = (cb_generic_t)&cb_friend_online;
     cbs[MSG_FRIEND_OFFLINE] = (cb_generic_t)&cb_friend_offline;
+    cbs[MSG_DUMP_ACTIVE_GROUPS] = (cb_generic_t)&cb_group_dump_active;
 
     /* initialize UI and start input thread */
     process_input();
