@@ -849,6 +849,7 @@ int sql_ch_initialize_group(int gid, struct server_group *grp)
 
     if ((row = mysql_fetch_row(res)) != NULL) {
         int id = atoi(row[0]);
+        debugv("Initializing group(%d)\n", id);
         char *name = row[1];
         int owner_id = atoi(row[2]);
 

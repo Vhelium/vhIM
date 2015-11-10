@@ -44,8 +44,8 @@ static void on_user_online(struct server_user *su);
 static void on_user_offline(struct server_user *su);
 
 // User Management
-static void on_user_added_to_group(struct server_user *user, int gid);
-static void on_user_removed_from_group(struct server_user *user, int gid);
+static void on_user_added_to_group(int gid, int uid);
+static void on_user_removed_from_group(int gid, int uid);
 static bool is_user_logged_in(char *uname);
 static struct server_user *authorize_client(SSL *ssl, char* username, char* pwd, int *res);
 
@@ -278,7 +278,7 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
             int gid;
             if (sql_ch_create_group(name, user->id, &gid) == SQLV_SUCCESS) {
                 /* if group was created successfuly, add user to it (locally) */
-                on_user_added_to_group(user, gid);
+                on_user_added_to_group(gid, user->id);
             }
 
             free(name);
@@ -292,7 +292,7 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
 
             if (sql_ch_is_group_owner(gid, uid)) {
                 sql_ch_add_user_to_group(gid, uid);
-                on_user_added_to_group(user, gid);
+                on_user_added_to_group(gid, uid);
             }
         }
         break;
@@ -871,14 +871,20 @@ static void on_user_offline(struct server_user *user)
     vistack_destroy(user_groups);
 }
 
-static void on_user_added_to_group(struct server_user *user, int gid)
+static void on_user_added_to_group(int gid, int uid)
 {
-    add_user_to_active_groups(user, gid);
+    struct server_user *user = get_user_by_id(uid);
+    if (user != NULL) { /* user is online */
+        add_user_to_active_groups(user, gid);
+    }
 }
 
-static void on_user_removed_from_group(struct server_user *user, int gid)
+static void on_user_removed_from_group(int gid, int uid)
 {
-    remove_user_from_active_groups(user, gid);
+    struct server_user *user = get_user_by_id(uid);
+    if (user != NULL) { /* user is online */
+        remove_user_from_active_groups(user, gid);
+    }
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
@@ -899,17 +905,22 @@ static void add_user_to_active_groups(struct server_user *user, int gid)
      * 1: Group not active yet
      */
     if (group == NULL) {
+        debugv("adding user(%d) to active group(%d): group=NULL\n", user->id, gid);
         /* create new group object */
         group = server_group_create();
         /* fetch group infos from DB */
         sql_ch_initialize_group(gid, group);
         /* add user to the group object */
         server_group_add_user(group, user->id);
+        /* add group to active_groups */
+        int res;
+        gdsl_rbtree_insert(active_groups, group, &res);
     }
     /*
      * 2: Group already active
      */
     else {
+        debugv("adding user(%d) to active group(%d): group=existing\n", user->id, gid);
         /* add user to the group object */
         server_group_add_user(group, user->id);
     }
@@ -922,6 +933,7 @@ static void remove_user_from_active_groups(struct server_user *user, int gid)
     struct server_group *group = get_group_by_id(gid);
 
     if (group != NULL) {
+        debugv("removing user(%d) to active group(%d): group=NULL\n", user->id, gid);
         server_group_remove_user(group, user->id);
         
         /* check if user was the last online member in group */
