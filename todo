@@ -1,9 +1,0 @@
-server:
-    destroy all server_client and server_user when destroying the rb tree
-    password check via random string
-    /who -> print logged in users
-
-
-client:
-    inferface:
-        two panels: input & output
