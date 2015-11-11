@@ -7,6 +7,18 @@
 #include <openssl/sha.h>
 #include "utility/vistack.h"
 
+static void test_int()
+{
+    int *i = calloc(1, sizeof(int));
+    printf("i: %d\n", *i);
+    (*i)++;
+    printf("i: %d\n", *i);
+    *i = 88;
+    printf("i: %d\n", *i);
+
+    free(i);
+}
+
 static void test_stack()
 {
     struct vistack *s = vistack_create();
@@ -132,5 +144,5 @@ static void test_sql()
 
 int main(void)
 {
-    test_stack();
+    test_int();
 }

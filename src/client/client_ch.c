@@ -29,7 +29,7 @@ SSL_CTX* init_ctx(void)
 
     OpenSSL_add_all_algorithms();       /* Load cryptos, et.al. */
     SSL_load_error_strings();           /* Bring in and register error messages */
-    method = SSLv3_client_method();     /* Create new client-method instance */
+    method = TLSv1_1_client_method();     /* Create new client-method instance */
     ctx = SSL_CTX_new(method);          /* Create new context */
     if ( ctx == NULL ) {
         ERR_print_errors_fp(stderr);

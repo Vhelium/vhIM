@@ -173,6 +173,7 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
             ret = 2;
         free(user);
     }
+    /* group create */
     else if (strcmp(type, "gcreate") == 0) {
         char *name = NULL;
         if (next_word(&cmd, &name)) {
@@ -183,6 +184,7 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
             ret = 2;
         free(name);
     }
+    /* group add user */
     else if (strcmp(type, "gadd") == 0) {
         char *gid;
         if (next_word(&cmd, &gid)) {
@@ -199,11 +201,61 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
             ret = 2;
         free (gid);
     }
+    /* group remove user */
+    else if (strcmp(type, "gremove") == 0) {
+        char *gid;
+        if (next_word(&cmd, &gid)) {
+            char *uid;
+            if(next_word(&cmd, &uid)) {
+                char *a[] = {gid, uid};
+                exec_cmd(MSG_GROUP_REMOVE_USER, a);
+            }
+            else
+                ret = 2;
+            free(uid);
+        }
+        else
+            ret = 2;
+        free (gid);
+    }
+    /* group delete */
     else if (strcmp(type, "gdelete") == 0) {
         char *gid= NULL;
         if (next_word(&cmd, &gid)) {
             char *a[] = {gid};
             exec_cmd(MSG_GROUP_DELETE, a);
+        }
+        else
+            ret = 2;
+        free(gid);
+    }
+    /* group send */
+    else if (strcmp(type, "g") == 0) {
+        char *group = NULL;
+        if (next_word(&cmd, &group)) {
+            char *txt = NULL;
+            if (next_word(&cmd, &txt)) {
+                char *a[] = {group, txt};
+                exec_cmd(MSG_TXT_GROUP, a);
+            }
+            else
+                ret = 2;
+            free(txt);
+        }
+        else
+            ret = 2;
+        free(group);
+    }
+    /* active groups dump */
+    else if (strcmp(type, "gadump") == 0) {
+        exec_cmd(MSG_DUMP_ACTIVE_GROUPS, NULL);
+    }
+    /* users online of group */
+    else if (strcmp(type, "gwho") == 0) {
+        char *gid= NULL;
+        if (next_word(&cmd, &gid)) {
+            char *a[] = {gid};
+            exec_cmd(MSG_GROUP_WHO, a);
         }
         else
             ret = 2;

@@ -11,7 +11,9 @@
 #include "../constants.h"
 #include "../utility/strings_helper.h"
 #include "../utility/vstack.h"
+#include "../utility/vistack.h"
 #include "../server/server_user.h"
+#include "../server/server_group.h"
 
 struct sql_conection {
     char server[64];
@@ -656,7 +658,7 @@ END:
     return result == SQLV_ENTRY_EXISTS;
 }
 
-int sql_ch_create_group(const char *name, int uid_owner)
+int sql_ch_create_group(const char *name, int uid_owner, int *gid)
 {
     int result = SQLV_SUCCESS;
     MYSQL *con;
@@ -678,6 +680,136 @@ int sql_ch_create_group(const char *name, int uid_owner)
         goto END;
     }
 
+    *gid = mysql_insert_id(con);
+
+END:
+    mysql_close(con);
+
+    return result;
+}
+
+int sql_ch_get_member_count_of_group(int gid, int *count)
+{
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    sprintf(query, "SELECT COUNT(*) FROM `users_to_group` WHERE `group_id` = '%d')",
+            gid);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    if ((row = mysql_fetch_row(res)) != NULL) {
+        *count = atoi(row[0]);
+    }
+    else {
+        result = SQLV_CONNECTION_ERROR;
+    }
+
+    mysql_free_result(res);
+
+END:
+    mysql_close(con);
+
+    return result == SQLV_ENTRY_EXISTS;
+}
+
+int sql_ch_delete_group(int gid)
+{
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    sprintf(query, "DELETE FROM `groups` WHERE `id` = '%d'", gid);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+END:
+    mysql_close(con);
+
+    return result;
+}
+
+int sql_ch_pass_group_ownership(int gid, int uid_old_owner, int *uid_new_owner)
+{
+    /* get first users_to_group entry that matches gid, sorted ascending */
+    *uid_new_owner = -1;
+
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    /* fetch first occurence (that is not the old owner) */
+    sprintf(query, "SELECT `user_id` FROM `users_to_group` WHERE `group_id`='%d' AND `user_id`<>'%d' ORDER BY id ASC LIMIT 1",
+            gid, uid_old_owner);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    if ((row = mysql_fetch_row(res)) != NULL) {
+        *uid_new_owner = atoi(row[0]);
+    }
+    else {
+        result = SQLV_CONNECTION_ERROR;
+    }
+
+    mysql_free_result(res);
+
+    if (*uid_new_owner != -1) {
+        /* update the corresponding rows */
+        sprintf(query, "UPDATE `groups` SET `owner_id`='%d' WHERE `id`='%d'",
+                *uid_new_owner, gid);
+
+        if (mysql_query(con, query)) {
+            errv("%s\n", mysql_error(con));
+            result = SQLV_CONNECTION_ERROR;
+            goto END;
+        }
+    }
+    else {
+        debugv("no new owner found for group %d", gid);
+    }
+
 END:
     mysql_close(con);
 
@@ -686,8 +818,47 @@ END:
 
 bool sql_ch_is_group_owner(int gid, int uid)
 {
-    //TODO
-    return true;
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    sprintf(query, "SELECT EXISTS(SELECT 1 FROM `groups` WHERE `id` = '%d' AND `owner_id` = '%d')",
+            gid, uid);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    if ((row = mysql_fetch_row(res)) != NULL) {
+        if (row[0][0] == '1') {
+            result = SQLV_ENTRY_EXISTS;
+            goto QUERY_FAIL;
+        }
+    }
+    else {
+        result = SQLV_NOPE;
+        goto QUERY_FAIL;
+    }
+
+QUERY_FAIL:
+    mysql_free_result(res);
+
+END:
+    mysql_close(con);
+
+    return result == SQLV_ENTRY_EXISTS;
 }
 
 int sql_ch_add_user_to_group(int gid, int uid)
@@ -767,6 +938,126 @@ QUERY_FAIL:
     }
     else
         goto END;
+
+END:
+    mysql_close(con);
+
+    return result;
+}
+
+int sql_ch_remove_user_from_group(int gid, int uid)
+{
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    sprintf(query, "DELETE FROM `users_to_group` WHERE `group_id`='%d' AND `user_id`='%d'",
+            gid, uid);
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+END:
+    mysql_close(con);
+
+    return result;
+}
+
+
+int sql_ch_get_groups_of_user(int uid, struct vistack **g)
+{
+    struct vistack *grps = vistack_create();
+    
+    int result = SQLV_SUCCESS;
+    MYSQL *con;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    /* retrieve all groups for user */
+    sprintf(query, "SELECT group_id FROM `users_to_group` WHERE `user_id` = '%d'", uid); 
+
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        result = SQLV_CONNECTION_ERROR;
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    while ((row = mysql_fetch_row(res)) != NULL) {
+        // fetch gid
+        char *gid_str = row[0];
+        int gid = atoi(gid_str);
+
+        vistack_push(grps, gid);
+    }
+
+    mysql_free_result(res);
+
+END:
+    mysql_close(con);
+
+    *g = grps;
+
+    // return the list
+    return result;
+}
+
+int sql_ch_initialize_group(int gid, struct server_group *grp)
+{
+    MYSQL *con;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+    int result = SQLV_FAILURE;
+
+    con = mysql_init(NULL);
+    if (!mysql_real_connect(con, sql_con.server, sql_con.user, sql_con.pw, sql_con.db,
+                0, NULL, 0)) {
+        errv("%s\n", mysql_error(con));
+        goto END;
+    }
+
+    sprintf(query, "SELECT * FROM `groups` WHERE `id`='%d'", gid);
+    if (mysql_query(con, query)) {
+        errv("%s\n", mysql_error(con));
+        goto END;
+    }
+
+    res = mysql_use_result(con);
+
+    if ((row = mysql_fetch_row(res)) != NULL) {
+        int id = atoi(row[0]);
+        debugv("Initializing group(%d)\n", id);
+        char *name = row[1];
+        int owner_id = atoi(row[2]);
+
+        server_group_initialize(grp, id, name, owner_id);
+        result = SQLV_SUCCESS;
+    }
+    else {
+        goto QUERY_FAIL;
+    }
+
+QUERY_FAIL:
+    mysql_free_result(res);
 
 END:
     mysql_close(con);
