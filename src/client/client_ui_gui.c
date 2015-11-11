@@ -37,22 +37,30 @@ static void cb_auth_failed(const char *msg, int res)
 
 static void cb_broadcast(const char *name, const char *msg)
 {
-    gui_print(msg, name, GUI_MSG_TYPE_USER);
+    char print_msg[strlen(msg) + 3];
+    sprintf(print_msg, "%s\n", msg);
+    gui_print(print_msg, name, GUI_MSG_TYPE_USER);
 }
 
 static void cb_system_msg(const char *msg)
 {
-    gui_print(msg, NULL, GUI_MSG_TYPE_SERVER);
+    char print_msg[strlen(msg) + 3];
+    sprintf(print_msg, "%s\n", msg);
+    gui_print(print_msg, NULL, GUI_MSG_TYPE_SERVER);
 }
 
 static void cb_registr_successful(const char *msg)
 {
-    gui_print(msg, NULL, GUI_MSG_TYPE_SERVER);
+    char print_msg[strlen(msg) + 3];
+    sprintf(print_msg, "%s\n", msg);
+    gui_print(print_msg, NULL, GUI_MSG_TYPE_SERVER);
 }
 
 static void cb_registr_failed(const char *msg)
 {
-    gui_print(msg, NULL, GUI_MSG_TYPE_SERVER);
+    char print_msg[strlen(msg) + 3];
+    sprintf(print_msg, "%s\n", msg);
+    gui_print(print_msg, NULL, GUI_MSG_TYPE_SERVER);
 }
 
 static void cb_who(struct vstack *users)
@@ -108,7 +116,7 @@ static void cb_friends(struct vstack *on, struct vstack *off, struct vstack *req
     }
 }
 
-// TODO: Add Name to remove-friend and friend-offline functions!!
+// TODO: Store and handle names.
 static void cb_remove_friend(int uid)
 {
     char print_msg[50];
@@ -209,6 +217,7 @@ static int execute_command(int type, char *argv[])
 
 static void process_input(char *input, int length)
 {
+    // FIXME: Add connection check before executing command!!
     if(length > 0){
         if(input[0] == '/'){
             process_command(input, &execute_command);
@@ -245,7 +254,14 @@ void gui_print(const char *msg, const char *origin, int type)
 
     // Add origin tag to the message.
     if(type == GUI_MSG_TYPE_USER){
+        // Check if the origin exists.
+        if(!origin) return;
         // TODO: Use user specific color (Session dependent).
+        char print_msg[50];
+        sprintf(print_msg, "[%.40s]>>\t", origin);
+        gtk_text_buffer_insert_with_tags_by_name(
+                out_buff, &end, print_msg, -1,
+                "weight_bold", "color_orange", NULL);
     }else{
         switch(type){
             case GUI_MSG_TYPE_INFO:
@@ -317,6 +333,8 @@ void set_up_output_buffer(){
     out_buff = gtk_text_buffer_new(NULL);
     GdkRGBA color;
 
+    gdk_rgba_parse(&color, "orange");
+    gtk_text_buffer_create_tag(out_buff, "color_orange", "foreground-rgba", &color, NULL);
     gdk_rgba_parse(&color, "red");
     gtk_text_buffer_create_tag(out_buff, "color_red", "foreground-rgba", &color, NULL);
     gdk_rgba_parse(&color, "black");
