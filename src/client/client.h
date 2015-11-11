@@ -41,4 +41,6 @@ int cl_exec_group_send(int gid, const char *msg);
 
 int cl_exec_group_dump_active(void);
 
+int cl_exec_group_who(int gid);
+
 #endif

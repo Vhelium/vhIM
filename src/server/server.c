@@ -57,6 +57,7 @@ static void remove_user_from_active_groups(struct server_user *user, int gid);
 static struct server_group *get_group_by_id(int id);
 static void set_active_groups(datapacket *dp);
 static void on_group_deleted(int gid);
+static void on_group_ownership_changed(int gid, int uid_new_owner);
 
 // Friends
 static void send_friend_request(int uid_from, int uid_to);
@@ -278,7 +279,8 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
 
             int gid;
             if (sql_ch_create_group(name, user->id, &gid) == SQLV_SUCCESS) {
-                /* if group was created successfuly, add user to it (locally) */
+                /* if group was created successfuly, add user to it */
+                sql_ch_add_user_to_group(gid, user->id);
                 on_user_added_to_group(gid, user->id);
             }
 
@@ -325,15 +327,16 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
         }
         break;
         
-        case MSG_GROUP_SEND: {
+        case MSG_TXT_GROUP: {
             int gid = datapacket_get_int(dp);
-            struct server_group *group = NULL;
+            struct server_group *group = get_group_by_id(gid);
             if (group != NULL) {
                 char *msg = datapacket_get_string(dp);
                 printf("U->G [%d->%d]: %s\n",user->id, gid, msg);
 
-                datapacket *answer = datapacket_create(MSG_GROUP_SEND);
+                datapacket *answer = datapacket_create(MSG_TXT_GROUP);
                 datapacket_set_int(answer, gid);
+                datapacket_set_int(answer, user->id);
                 datapacket_set_string(answer, msg);
 
                 send_to_group(group, answer);
@@ -754,7 +757,8 @@ static int send_to_group(struct server_group *g_to, datapacket *dp)
         int uid = *((int *)e);
         struct server_user *user = get_user_by_id(uid);
         if (user == NULL) {
-            /* should NOT happen. Only ONLINE users must by in members of an active group! */
+            /* should NOT happen.
+             * Only ONLINE users must by in members of an active group! */
             printf("[EE] USER %d = NULL IN SEND_TO_GROUP with gid=%d\n", uid, g_to->id);
         }
         else {
@@ -910,7 +914,9 @@ static void on_user_added_to_group(int gid, int uid)
 static void on_user_removed_from_group(int gid, int uid, bool is_owner)
 {
     /* check if anyone is left in that group */
-    if (sql_ch_get_member_count_of_group(gid) <= 0) {
+    int mem_count;
+    sql_ch_get_member_count_of_group(gid, &mem_count);
+    if (mem_count <= 0) {
         /* delete group in DB */
         sql_ch_delete_group(gid);
         /* clean up (e.g. active groups) */
@@ -919,7 +925,9 @@ static void on_user_removed_from_group(int gid, int uid, bool is_owner)
     /* check if removed user was owner */
     else if (is_owner) {
         /* pass ownership */
-        sql_ch_pass_group_ownership(gid, uid);
+        int uid_new_owner;
+        sql_ch_pass_group_ownership(gid, uid, &uid_new_owner);
+        on_group_ownership_changed(gid, uid_new_owner);
     }
 
     struct server_user *user = get_user_by_id(uid);
@@ -977,9 +985,9 @@ static void remove_user_from_active_groups(struct server_user *user, int gid)
         debugv("removing user(%d) to active group(%d): group=NULL\n", user->id, gid);
         server_group_remove_user(group, user->id);
         
-        /* check if user was the last online member in group */
+        /* check if user was the last online member in active group */
         if (server_group_member_count(group) <= 0) {
-            /* remove group from groups and free the object */
+            /* remove group from active groups and free the object */
             gdsl_rbtree_remove(active_groups, group);
             server_group_destroy(group);
         }
@@ -1025,9 +1033,32 @@ static void set_active_groups(datapacket *dp)
     write_active_groups_to_dp(dp);
 }
 
+/* group permanently deleted (not just the active group!) */
 static void on_group_deleted(int gid)
 {
-    //TODO
-    //send message to users
-    //delete from active groups
+    struct server_group *group = get_group_by_id(gid);
+    if (group != NULL) {
+        /* send message to online users in that group */
+        datapacket *dp = datapacket_create(MSG_GROUP_DELETE);
+        datapacket_set_int(dp, gid);
+        send_to_group(group, dp);
+
+        /* remove group from active groups */
+        gdsl_rbtree_remove(active_groups, group);
+        server_group_destroy(group);
+    }
+}
+
+static void on_group_ownership_changed(int gid, int uid_new_owner)
+{
+    struct server_group *sg = get_group_by_id(gid);
+    if (sg != NULL) {
+        sg->owner_id = uid_new_owner; 
+
+        /* send message to online users in that group */
+        datapacket *dp = datapacket_create(MSG_GROUP_OWNER_CHANGED);
+        datapacket_set_int(dp, gid);
+        datapacket_set_int(dp, uid_new_owner);
+        send_to_group(sg, dp);
+    }
 }

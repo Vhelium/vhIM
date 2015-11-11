@@ -109,6 +109,21 @@ static void cb_group_dump_active(const char *msg)
     printf("%s\n\n", msg);
 }
 
+static void cb_group_delete(int gid)
+{
+    printf("Group %d has been deleted.\n", gid);
+}
+
+static void cb_group_owner_changed(int gid, int uid)
+{
+    printf("Owner of group %d hast changed: %d\n", gid, uid);
+}
+
+static void cb_txt_group(int gid, int uid, const char *msg)
+{
+    printf("Grp(%d) Usr(%d): %s\n", gid, uid, msg);
+}
+
 /* ========================================================================= */
 
 static int execute_command(int type, char *argv[])
@@ -230,7 +245,7 @@ static int execute_command(int type, char *argv[])
         }
         break;
 
-        case MSG_GROUP_SEND: {
+        case MSG_TXT_GROUP: {
             /* check if passed argument is a number */
             if (!is_decimal_number(argv[0]))
                 return 3;
@@ -247,6 +262,13 @@ static int execute_command(int type, char *argv[])
 
         case CMD_HELP: {
             printf("Go fuck yourself.\n");
+        }
+        break;
+
+        case MSG_GROUP_WHO: {
+            if (is_decimal_number(argv[0])) {
+                cl_exec_group_who(atoi(argv[0]));
+            }
         }
         break;
 
@@ -297,6 +319,9 @@ void cl_ui_cons_start(cb_generic_t *cbs, int port)
     cbs[MSG_FRIEND_ONLINE] = (cb_generic_t)&cb_friend_online;
     cbs[MSG_FRIEND_OFFLINE] = (cb_generic_t)&cb_friend_offline;
     cbs[MSG_DUMP_ACTIVE_GROUPS] = (cb_generic_t)&cb_group_dump_active;
+    cbs[MSG_GROUP_DELETE] = (cb_generic_t)&cb_group_delete;
+    cbs[MSG_GROUP_OWNER_CHANGED] = (cb_generic_t)&cb_group_owner_changed;
+    cbs[MSG_TXT_GROUP] = (cb_generic_t)&cb_txt_group;
 
     /* initialize UI and start input thread */
     process_input();

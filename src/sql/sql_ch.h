@@ -155,7 +155,7 @@ int sql_ch_delete_friends(int uid_1, int uid_2);
 bool sql_ch_user_exists(int uid);
 
 /* returns the count of members in the given group */
-int sql_ch_get_member_count_of_group(int gid);
+int sql_ch_get_member_count_of_group(int gid, int *count);
 
 /* creates new group with name `name` and owner `uid_owner` */
 int sql_ch_create_group(const char *name, int uid_owner, int *gid);
@@ -169,11 +169,11 @@ int sql_ch_add_user_to_group(int gid, int uid);
 int sql_ch_remove_user_from_group(int gid, int uid);
 
 /* Deletes group
- * Will delete any user<->group relations */
+ * Will delete any user<->group relations (ON CASCADE) */
 int sql_ch_delete_group(int gid);
 
 /* Passes owner ship to next user (the one first added) */
-int sql_ch_pass_group_ownership(int gid, int uid_old_owner);
+int sql_ch_pass_group_ownership(int gid, int uid_old_owner, int *uid_new_owner);
 
 /* returns true if user with id `uid` is owner of group `gid` */
 bool sql_ch_is_group_owner(int gid, int uid);

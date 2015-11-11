@@ -260,6 +260,28 @@ static void process_packet(void *sender, byte *data)
         }
         break;
 
+        case MSG_GROUP_DELETE: {
+            int gid = datapacket_get_int(dp);
+            ((cb_group_delete_t)callbacks[MSG_GROUP_DELETE])(gid);
+        }
+        break;
+
+        case MSG_GROUP_OWNER_CHANGED: {
+            int gid = datapacket_get_int(dp);
+            int uid = datapacket_get_int(dp);
+            ((cb_group_owner_changed_t)callbacks[MSG_GROUP_OWNER_CHANGED])(gid, uid);
+        }
+        break;
+
+        case MSG_TXT_GROUP: {
+            int gid = datapacket_get_int(dp);
+            int uid = datapacket_get_int(dp);
+            char *msg = datapacket_get_string(dp);
+            ((cb_txt_group_t)callbacks[MSG_TXT_GROUP])(gid, uid, msg);
+            free(msg);
+        }
+        break;
+
         default:
             errv("Unknown packet: %d\n", packet_type);
             break;
@@ -406,7 +428,7 @@ int cl_exec_group_remove_user(int gid, int uid)
 
 int cl_exec_group_send(int gid, const char *msg)
 {
-    datapacket *dp = datapacket_create(MSG_GROUP_SEND);
+    datapacket *dp = datapacket_create(MSG_TXT_GROUP);
     datapacket_set_int(dp, gid);
     datapacket_set_string(dp, msg);
     send_to_server(dp);
@@ -416,6 +438,14 @@ int cl_exec_group_send(int gid, const char *msg)
 int cl_exec_group_dump_active(void)
 {
     datapacket *dp = datapacket_create(MSG_DUMP_ACTIVE_GROUPS);
+    send_to_server(dp);
+    return 0;
+}
+
+int cl_exec_group_who(int gid)
+{
+    datapacket *dp = datapacket_create(MSG_GROUP_WHO);
+    datapacket_set_int(dp, gid);
     send_to_server(dp);
     return 0;
 }
