@@ -28,7 +28,8 @@
 #define PORT 55099
 #define HOST "vhelium.com"
 
-static cb_generic_t callbacks[100];
+#define MAX_CALLBACK_COUNT 100
+static cb_generic_t callbacks[MAX_CALLBACK_COUNT];
 
 static char arg_host[128] = {0};
 static int arg_port;
@@ -482,10 +483,11 @@ void *threaded_connect(void *arg)
     else
         set_is_connected_synced(true);
 
+    ((cb_client_connected_t)callbacks[CB_CLIENT_CONNECTED])();
     client_ch_listen(&process_packet);
 
     client_ch_destroy();
-    printf("disconnected.\n"); // TODO: Obnoxious Console Output
+    ((cb_client_disconnected_t)callbacks[CB_CLIENT_DISCONNECTED])();
 
     set_is_connected_synced(false);
 
@@ -547,6 +549,8 @@ static int client_disconnect()
 
 /* ============== MAIN ========================================= */
 
+static void cl_nothing() {}
+
 int main(int argc, char *argv[])
 {
     bool is_gui = false;
@@ -572,6 +576,12 @@ int main(int argc, char *argv[])
         }
     }
 
+    /* Set all callbacks to a dummy function.
+     * Enables the client to run even if not all cbs are initialized */
+    for (i = 0; i < MAX_CALLBACK_COUNT; ++i) {
+        callbacks[i] = (cb_generic_t)&cl_nothing;
+    }
+
     if (is_gui) {
         ret = cl_ui_gui_start(callbacks, PORT);
     }
@@ -583,6 +593,7 @@ int main(int argc, char *argv[])
     if (cl_get_is_connected_synced()) {
         client_ch_destroy();
     }
+    ((cb_client_destroyed_t)callbacks[CB_CLIENT_DESTROYED])();
     
     pthread_mutex_destroy(&mutex_connected);
     return ret;

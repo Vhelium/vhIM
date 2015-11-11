@@ -20,5 +20,8 @@ typedef void (*cb_group_dump_active_t)(const char *msg);
 typedef void (*cb_group_owner_changed_t)(int gid, int uid);
 typedef void (*cb_group_delete_t)(int gid);
 typedef void (*cb_txt_group_t)(int gid, int uid, const char *msg);
+typedef void (*cb_client_disconnected_t)(void);
+typedef void (*cb_client_connected_t)(void);
+typedef void (*cb_client_destroyed_t)(void);
 
 #endif

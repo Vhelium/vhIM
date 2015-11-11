@@ -124,6 +124,21 @@ static void cb_txt_group(int gid, int uid, const char *msg)
     printf("Grp(%d) Usr(%d): %s\n", gid, uid, msg);
 }
 
+static void cb_client_disconnected(void)
+{
+    printf("Connected!\n");
+}
+
+static void cb_client_connected(void)
+{
+    printf("Disconnected!\n");
+}
+
+static void cb_client_destroyed(void)
+{
+    printf("Client destroyed.\n");
+}
+
 /* ========================================================================= */
 
 static int execute_command(int type, char *argv[])
@@ -322,6 +337,9 @@ void cl_ui_cons_start(cb_generic_t *cbs, int port)
     cbs[MSG_GROUP_DELETE] = (cb_generic_t)&cb_group_delete;
     cbs[MSG_GROUP_OWNER_CHANGED] = (cb_generic_t)&cb_group_owner_changed;
     cbs[MSG_TXT_GROUP] = (cb_generic_t)&cb_txt_group;
+    cbs[CB_CLIENT_DISCONNECTED] = (cb_generic_t)&cb_client_disconnected;
+    cbs[CB_CLIENT_CONNECTED] = (cb_generic_t)&cb_client_connected;
+    cbs[CB_CLIENT_DESTROYED] = (cb_generic_t)&cb_client_destroyed;
 
     /* initialize UI and start input thread */
     process_input();

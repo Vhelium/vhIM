@@ -124,8 +124,6 @@ void client_ch_listen(callback_msg_rcv_t cb_msg_rcv)
     size_t rest_buffer_len = 0;
     int res = 1;
 
-    printf("start listening..\n"); // TODO: Obnoxious Console Output
-
     while (res && (nbytes = SSL_read(ssl, data_buffer, sizeof(data_buffer))) > 0)
     {
         res = bp_process_data(data_buffer, nbytes,
@@ -142,6 +140,4 @@ void client_ch_destroy()
 {
     close(sockfd);
     SSL_CTX_free(ctx);
-
-    printf("destroy..\n"); // TODO: Obnoxious Console Output
 }
