@@ -688,6 +688,18 @@ END:
     return result;
 }
 
+int sql_ch_delete_group(int gid)
+{
+    //TODO
+    return 0;
+}
+
+int sql_ch_pass_group_ownership(int gid, int uid_old_owner)
+{
+    //TODO
+    return 0;
+}
+
 bool sql_ch_is_group_owner(int gid, int uid)
 {
     //TODO
@@ -777,6 +789,13 @@ END:
 
     return result;
 }
+
+int sql_ch_remove_user_from_group(int gid, int uid)
+{
+    //TODO
+    return 0;
+}
+
 
 int sql_ch_get_groups_of_user(int uid, struct vistack **g)
 {

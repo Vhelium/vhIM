@@ -161,6 +161,17 @@ int sql_ch_create_group(const char *name, int uid_owner, int *gid);
  * will NOT check if user is allowed to do so. check beforehand! */
 int sql_ch_add_user_to_group(int gid, int uid);
 
+/* Removes user from group
+ * Does not do any cleanup of the group itself */
+int sql_ch_remove_user_from_group(int gid, int uid);
+
+/* Deletes group
+ * Will delete any user<->group relations */
+int sql_ch_delete_group(int gid);
+
+/* Passes owner ship to next user (the one first added) */
+int sql_ch_pass_group_ownership(int gid, int uid_old_owner);
+
 /* returns true if user with id `uid` is owner of group `gid` */
 bool sql_ch_is_group_owner(int gid, int uid);
 

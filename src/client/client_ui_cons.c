@@ -221,6 +221,15 @@ static int execute_command(int type, char *argv[])
         }
         break;
 
+        case MSG_GROUP_REMOVE_USER: {
+            if (is_decimal_number(argv[0]) && is_decimal_number(argv[1])) {
+                cl_exec_group_add_user(atoi(argv[0]), atoi(argv[1]));
+            }
+            else
+                printf("invalid arguments.\n");
+        }
+        break;
+
         case MSG_GROUP_SEND: {
             /* check if passed argument is a number */
             if (!is_decimal_number(argv[0]))

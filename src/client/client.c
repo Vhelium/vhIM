@@ -380,13 +380,24 @@ int cl_exec_group_create(const char *name)
 
 int cl_exec_group_delete(int gid)
 {
-    //TODO
+    datapacket *dp = datapacket_create(MSG_GROUP_DELETE);
+    datapacket_set_int(dp, gid);
+    send_to_server(dp);
     return 0;
 }
 
 int cl_exec_group_add_user(int gid, int uid)
 {
     datapacket *dp = datapacket_create(MSG_GROUP_ADD_USER);
+    datapacket_set_int(dp, gid);
+    datapacket_set_int(dp, uid);
+    send_to_server(dp);
+    return 0;
+}
+
+int cl_exec_group_remove_user(int gid, int uid)
+{
+    datapacket *dp = datapacket_create(MSG_GROUP_REMOVE_USER);
     datapacket_set_int(dp, gid);
     datapacket_set_int(dp, uid);
     send_to_server(dp);

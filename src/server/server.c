@@ -45,7 +45,7 @@ static void on_user_offline(struct server_user *su);
 
 // User Management
 static void on_user_added_to_group(int gid, int uid);
-static void on_user_removed_from_group(int gid, int uid);
+static void on_user_removed_from_group(int gid, int uid, bool is_owner);
 static bool is_user_logged_in(char *uname);
 static struct server_user *authorize_client(SSL *ssl, char* username, char* pwd, int *res);
 
@@ -56,6 +56,7 @@ static void add_user_to_active_groups(struct server_user *user, int gid);
 static void remove_user_from_active_groups(struct server_user *user, int gid);
 static struct server_group *get_group_by_id(int id);
 static void set_active_groups(datapacket *dp);
+static void on_group_deleted(int gid);
 
 // Friends
 static void send_friend_request(int uid_from, int uid_to);
@@ -285,14 +286,41 @@ static void handle_packet_auth(SSL *ssl, struct server_user *user, datapacket *d
         }
         break;
 
+        case MSG_GROUP_DELETE: {
+            int gid = datapacket_get_int(dp);
+            printf("[info] user %d removes group %d\n", user->id, gid);
+
+            if (sql_ch_is_group_owner(gid, user->id)) {
+                /* delete group in DB */
+                sql_ch_delete_group(gid);
+                /* clean up (e.g. active groups) */
+                on_group_deleted(gid);
+            }
+        }
+        break;
+
         case MSG_GROUP_ADD_USER: {
             int gid = datapacket_get_int(dp);
             int uid = datapacket_get_int(dp);
             printf("[info] user %d adds user %d to group %d\n", user->id, uid, gid);
 
-            if (sql_ch_is_group_owner(gid, uid)) {
+            if (sql_ch_is_group_owner(gid, user->id)) {
                 sql_ch_add_user_to_group(gid, uid);
                 on_user_added_to_group(gid, uid);
+            }
+        }
+        break;
+
+        case MSG_GROUP_REMOVE_USER: {
+            int gid = datapacket_get_int(dp);
+            int uid = datapacket_get_int(dp);
+            printf("[info] user %d removes user %d from group %d\n",
+                    user->id, uid, gid);
+
+            bool is_owner = sql_ch_is_group_owner(gid, user->id);
+            if (uid == user->id /* self */ || is_owner /* owner */) {
+                sql_ch_remove_user_from_group(gid, uid);
+                on_user_removed_from_group(gid, uid, is_owner);
             }
         }
         break;
@@ -879,8 +907,14 @@ static void on_user_added_to_group(int gid, int uid)
     }
 }
 
-static void on_user_removed_from_group(int gid, int uid)
+static void on_user_removed_from_group(int gid, int uid, bool is_owner)
 {
+    /* check if removed user was owner */
+    if (is_owner) {
+        /* pass ownership */
+        sql_ch_pass_group_ownership(gid, uid);
+    }
+
     struct server_user *user = get_user_by_id(uid);
     if (user != NULL) { /* user is online */
         remove_user_from_active_groups(user, gid);
@@ -982,4 +1016,11 @@ static void set_active_groups(datapacket *dp)
 {
     datapacket_set_int(dp, (int)gdsl_rbtree_get_size(active_groups));
     write_active_groups_to_dp(dp);
+}
+
+static void on_group_deleted(int gid)
+{
+    //TODO
+    //send message to users
+    //delete from active groups
 }
