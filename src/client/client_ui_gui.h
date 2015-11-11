@@ -76,6 +76,19 @@ void send_button_clicked(GtkWidget *button, ClientGuiApp *app);
 gboolean on_key_press(GtkWidget *widget, GdkEventKey *pkey, ClientGuiApp *app);
 
 /*
+ * Function: set_up_output_buffer
+ * ------------------------------
+ * Description:
+ * Set up the tag-list for the output buffer.
+ * This allows printing in styled text.
+ *
+ * Arguments: void
+ *
+ * Returns: void
+ */
+void set_up_output_buffer();
+
+/*
  * Function: init_app
  * ------------------
  * Description:

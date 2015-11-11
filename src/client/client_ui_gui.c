@@ -23,14 +23,16 @@ static GtkTextBuffer *out_buff;
 
 static void cb_welcome (const char *msg)
 {
-    char print_msg[48];
+    char print_msg[50];
     sprintf(print_msg, "Welcome, %.35s!\n", msg);
     gui_print(print_msg, NULL, GUI_MSG_TYPE_SERVER);
 }
 
 static void cb_auth_failed(const char *msg, int res)
 {
-    // TODO: Implement
+    char print_msg[100];
+    sprintf(print_msg, "%.50s\nError Code: %d\n", msg, res);
+    gui_print(print_msg, NULL, GUI_MSG_TYPE_ERROR);
 }
 
 static void cb_broadcast(const char *name, const char *msg)
@@ -262,17 +264,24 @@ void gui_print(const char *msg, const char *origin, int type)
                         "weight_bold", "color_red", NULL);
                 break;
             default:
+                // TODO: Handle?
+                g_print("IO Error! >> Code 0x001\n");
                 break;
         }
     }
 
     // Update end iterator and print message.
-    //gtk_text_buffer_get_end_iter(out_buff, &end);
     gtk_text_buffer_insert_with_tags_by_name(out_buff, &end, msg, -1,
             "weight_normal", "color_black", NULL);
 
     // Write the buffer back to the text view.
     gtk_text_view_set_buffer(client->output, out_buff);
+
+    // Insert a mark to the end of the text and scroll to it.
+    GtkTextMark *mark = gtk_text_mark_new("mrk", TRUE);
+    gtk_text_buffer_add_mark(out_buff, mark, &end);
+    gtk_text_view_scroll_to_mark(client->output, mark, 0.0, FALSE, 0.0, 1.0);
+    gtk_text_buffer_delete_mark(out_buff, mark);
 }
 
 gboolean on_key_press(GtkWidget *widget, GdkEventKey *pKey, ClientGuiApp *app)
@@ -287,6 +296,7 @@ gboolean on_key_press(GtkWidget *widget, GdkEventKey *pKey, ClientGuiApp *app)
     return GDK_EVENT_PROPAGATE;
 }
 
+// TODO: Hinder sending on empty input field.
 void send_button_clicked(GtkWidget *button, ClientGuiApp *app)
 {
     // Read the text from the input field.
