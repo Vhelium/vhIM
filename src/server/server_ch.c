@@ -59,10 +59,15 @@ static struct server_client *get_client_by_fd(int fd)
     return gdsl_rbtree_search(clients, &compare_client_fd_directly, &fd);
 }
 
+static void gdsl_rbtree_clients_free(gdsl_element_t E)
+{
+    server_client_destroy((struct server_client *)E);
+}
+
 int server_ch_start(char *port)
 {
     // init datastructures
-    clients = gdsl_rbtree_alloc("CLIENTS", NULL, NULL, &compare_client_fd);
+    clients = gdsl_rbtree_alloc("CLIENTS", NULL, &gdsl_rbtree_clients_free, &compare_client_fd);
 
     // initialize SSL
     SSL_library_init();
@@ -322,6 +327,6 @@ void server_ch_disconnect_client(SSL *ssl, callback_cl_dc cb_cl_dc)
 
 void server_ch_destroy()
 {
+    SSL_CTX_free(ctx);
     gdsl_rbtree_free(clients);
-    //TODO: free resources
 }

@@ -26,6 +26,16 @@
 static gdsl_rbtree_t users;
 static gdsl_rbtree_t active_groups;
 
+static void gdsl_rbtree_users_free(gdsl_element_t E)
+{
+    server_user_destroy((struct server_user *)E);
+}
+
+static void gdsl_rbtree_active_groups_free(gdsl_element_t E)
+{
+    server_group_destroy((struct server_group *)E);
+}
+
 // Callback Functions
 static void cb_cl_cntd(struct server_client *sc);
 static void cb_msg_rcv(void *sc, byte *data);
@@ -98,8 +108,17 @@ static long int compare_group_id_directly(const gdsl_element_t E, void *VALUE)
 
 static void server_init()
 {
-    users = gdsl_rbtree_alloc("USERS", NULL, NULL, &compare_user_id);
-    active_groups = gdsl_rbtree_alloc("GROUPS", NULL, NULL, &compare_group_id);
+    users = gdsl_rbtree_alloc("USERS", NULL, &gdsl_rbtree_users_free, &compare_user_id);
+    active_groups = gdsl_rbtree_alloc("GROUPS", NULL, &gdsl_rbtree_active_groups_free, &compare_group_id);
+}
+
+static void server_destroy()
+{
+    /* free the users tree */
+    gdsl_rbtree_free(users);
+
+    /* free the active_groups tree */
+    gdsl_rbtree_free(active_groups);
 }
 
 int main(void)
@@ -111,6 +130,7 @@ int main(void)
 
     server_ch_listen(&cb_cl_cntd, &cb_msg_rcv, &cb_cl_dc);
 
+    server_destroy();
     server_ch_destroy();
     sql_ch_destroy();
 
