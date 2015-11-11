@@ -154,6 +154,9 @@ int sql_ch_delete_friends(int uid_1, int uid_2);
 /* returns if user with id `uid` exists */
 bool sql_ch_user_exists(int uid);
 
+/* returns the count of members in the given group */
+int sql_ch_get_member_count_of_group(int gid);
+
 /* creates new group with name `name` and owner `uid_owner` */
 int sql_ch_create_group(const char *name, int uid_owner, int *gid);
 

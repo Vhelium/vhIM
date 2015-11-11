@@ -688,6 +688,11 @@ END:
     return result;
 }
 
+int sql_ch_get_member_count_of_group(int gid)
+{
+
+}
+
 int sql_ch_delete_group(int gid)
 {
     //TODO

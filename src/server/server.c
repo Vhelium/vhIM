@@ -909,8 +909,15 @@ static void on_user_added_to_group(int gid, int uid)
 
 static void on_user_removed_from_group(int gid, int uid, bool is_owner)
 {
+    /* check if anyone is left in that group */
+    if (sql_ch_get_member_count_of_group(gid) <= 0) {
+        /* delete group in DB */
+        sql_ch_delete_group(gid);
+        /* clean up (e.g. active groups) */
+        on_group_deleted(gid);
+    }
     /* check if removed user was owner */
-    if (is_owner) {
+    else if (is_owner) {
         /* pass ownership */
         sql_ch_pass_group_ownership(gid, uid);
     }
