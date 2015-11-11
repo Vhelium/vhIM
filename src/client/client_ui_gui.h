@@ -5,6 +5,11 @@
 
 #include <gtk/gtk.h>
 
+#define GUI_MSG_TYPE_INFO 0
+#define GUI_MSG_TYPE_USER 1
+#define GUI_MSG_TYPE_SERVER 2
+#define GUI_MSG_TYPE_ERROR 3
+
 /* ================== Structs ================== */
 
 /*
@@ -30,10 +35,12 @@ typedef struct ClientGuiApp {
  * output text field.
  *
  * Arguments: msg - The message to print.
+ *            origin - The sender of the message.
+ *            type - The message type.
  *
  * Returns: void
  */
-void gui_print(char *msg);
+void gui_print(const char *msg, const char *origin, int type);
 
 /*
  * Function: send_button_clicked

@@ -19,29 +19,38 @@
 
 static int port_default;
 static ClientGuiApp *client;
+static GtkTextBuffer *out_buff;
 
 static void cb_welcome (const char *msg)
 {
+    char print_msg[48];
+    sprintf(print_msg, "Welcome, %.35s!\n", msg);
+    gui_print(print_msg, NULL, GUI_MSG_TYPE_SERVER);
 }
 
 static void cb_auth_failed(const char *msg, int res)
 {
+    // TODO: Implement
 }
 
 static void cb_broadcast(const char *name, const char *msg)
 {
+    gui_print(msg, name, GUI_MSG_TYPE_USER);
 }
 
 static void cb_system_msg(const char *msg)
 {
+    gui_print(msg, NULL, GUI_MSG_TYPE_SERVER);
 }
 
 static void cb_registr_successful(const char *msg)
 {
+    gui_print(msg, NULL, GUI_MSG_TYPE_SERVER);
 }
 
 static void cb_registr_failed(const char *msg)
 {
+    gui_print(msg, NULL, GUI_MSG_TYPE_SERVER);
 }
 
 static void cb_who(struct vstack *users)
@@ -97,16 +106,26 @@ static void cb_friends(struct vstack *on, struct vstack *off, struct vstack *req
     }
 }
 
+// TODO: Add Name to remove-friend and friend-offline functions!!
 static void cb_remove_friend(int uid)
 {
+    char print_msg[50];
+    sprintf(print_msg, "Friend with id %d has been removed.\n", uid);
+    gui_print(print_msg, NULL, GUI_MSG_TYPE_INFO);
 }
 
 static void cb_friend_online(int uid, const char *name)
 {
+    char print_msg[100];
+    sprintf(print_msg, "Your friend, %.35s [#%d] came online.\n", name, uid);
+    gui_print(print_msg, NULL, GUI_MSG_TYPE_INFO);
 }
 
 static void cb_friend_offline(int uid)
 {
+    char print_msg[50];
+    sprintf(print_msg, "Friend with id %d has gone offline.\n", uid);
+    gui_print(print_msg, NULL, GUI_MSG_TYPE_INFO);
 }
 
 static int execute_command(int type, char *argv[])
@@ -139,7 +158,8 @@ static int execute_command(int type, char *argv[])
             if(argv[1] != NULL && !is_decimal_number(argv[1])) return 3;
             int port = argv[1] != NULL ? atoi(argv[1]) : port_default;
             if(cl_exec_connect(argv[0], port)){
-                gui_print("Error connecting to host.\n");
+                gui_print("Error connecting to host.\n"
+                        , NULL, GUI_MSG_TYPE_ERROR);
                 exit(1);
             }
             break;
@@ -150,7 +170,8 @@ static int execute_command(int type, char *argv[])
             if(is_decimal_number(argv[0]) && is_decimal_number(argv[1]))
                 cl_exec_grant_privileges(atoi(argv[0]), atoi(argv[1]));
             else
-                gui_print("Error, invalid arguments.\n");
+                gui_print("Error, invalid arguments.\n"
+                        , NULL, GUI_MSG_TYPE_ERROR);
             break;
         case MSG_ADD_FRIEND:
             if(is_decimal_number(argv[0])) cl_exec_add_friend(atoi(argv[0]));
@@ -168,14 +189,17 @@ static int execute_command(int type, char *argv[])
             if(is_decimal_number(argv[0]) && is_decimal_number(argv[1]))
                 cl_exec_group_add_user(atoi(argv[0]), atoi(argv[1]));
             else
-                gui_print("Error, invalid arguments.\n");
+                gui_print("Error, invalid arguments.\n"
+                        , NULL, GUI_MSG_TYPE_ERROR);
             break;
         case CMD_HELP:
             // TODO: Handle help command.
-            gui_print("Go fuck yourself.\n");
+            gui_print("Go fuck yourself.\n"
+                    , NULL, GUI_MSG_TYPE_INFO);
             break;
         default:
-            gui_print("Invalid command.\n");
+            gui_print("Invalid command.\n"
+                    , NULL, GUI_MSG_TYPE_ERROR);
             return 1;
     }
     return 0;
@@ -189,21 +213,66 @@ static void process_input(char *input, int length)
         }else if(cl_get_is_connected_synced()){
             cl_exec_broadcast(input);
         }else{
-            // TODO: Return error: Not connected to server
+            gui_print("Not connected to a server.\n"
+                    , NULL, GUI_MSG_TYPE_ERROR);
         }
     }
 }
 
 /* =========================== GUI-HANDLERS =========================== */
 
-void gui_print(char *msg)
+void gui_print(const char *msg, const char *origin, int type)
 {
+    // Check if the message exists.
     if(!msg) return;
-    GtkTextBuffer *buff = gtk_text_view_get_buffer(client->output);
+    
+    // Grab the current local time.
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+
+    // Grab the output buffer and set end iterator.
+    out_buff = gtk_text_view_get_buffer(client->output);
     GtkTextIter end;
-    gtk_text_buffer_get_end_iter(buff, &end);
-    gtk_text_buffer_insert(buff, &end, msg, -1);
-    gtk_text_view_set_buffer(client->output, buff);
+    gtk_text_buffer_get_end_iter(out_buff, &end);
+
+    // Print the time stamp in front of the message.
+    char time_stamp[8];
+    sprintf(time_stamp, "[%.2d:%.2d]", tm.tm_hour, tm.tm_min);
+    gtk_text_buffer_insert_with_tags_by_name(out_buff, &end, time_stamp, -1,
+            "weight_normal", "color_blue", NULL);
+
+    // Add origin tag to the message.
+    if(type == GUI_MSG_TYPE_USER){
+        // TODO: Use user specific color (Session dependent).
+    }else{
+        switch(type){
+            case GUI_MSG_TYPE_INFO:
+                gtk_text_buffer_insert_with_tags_by_name(
+                        out_buff, &end, "[INFO]>>\t", -1,
+                        "weight_bold", "color_green", NULL);
+                break;
+            case GUI_MSG_TYPE_SERVER:
+                gtk_text_buffer_insert_with_tags_by_name(
+                        out_buff, &end, "[SERVER]>>\t", -1,
+                        "weight_bold", "color_blue", NULL);
+                break;
+            case GUI_MSG_TYPE_ERROR:
+                gtk_text_buffer_insert_with_tags_by_name(
+                        out_buff, &end, "[ERROR]>>\t", -1,
+                        "weight_bold", "color_red", NULL);
+                break;
+            default:
+                break;
+        }
+    }
+
+    // Update end iterator and print message.
+    //gtk_text_buffer_get_end_iter(out_buff, &end);
+    gtk_text_buffer_insert_with_tags_by_name(out_buff, &end, msg, -1,
+            "weight_normal", "color_black", NULL);
+
+    // Write the buffer back to the text view.
+    gtk_text_view_set_buffer(client->output, out_buff);
 }
 
 gboolean on_key_press(GtkWidget *widget, GdkEventKey *pKey, ClientGuiApp *app)
@@ -226,7 +295,6 @@ void send_button_clicked(GtkWidget *button, ClientGuiApp *app)
     gtk_text_buffer_get_bounds(buff, &start, &end);
     gchar *input = gtk_text_buffer_get_text(buff, &start, &end, FALSE);
     process_input(input, gtk_text_iter_get_offset(&end) + 1);
-    g_free(input); // XXX: Safe?
 
     // Clear the input text field.
     gtk_text_buffer_set_text(buff, "", -1);
@@ -234,6 +302,25 @@ void send_button_clicked(GtkWidget *button, ClientGuiApp *app)
 }
 
 /* =========================== GUI-SETUP ============================== */
+
+void set_up_output_buffer(){
+    out_buff = gtk_text_buffer_new(NULL);
+    GdkRGBA color;
+
+    gdk_rgba_parse(&color, "red");
+    gtk_text_buffer_create_tag(out_buff, "color_red", "foreground-rgba", &color, NULL);
+    gdk_rgba_parse(&color, "black");
+    gtk_text_buffer_create_tag(out_buff, "color_black", "foreground-rgba", &color, NULL);
+    gdk_rgba_parse(&color, "blue");
+    gtk_text_buffer_create_tag(out_buff, "color_blue", "foreground-rgba", &color, NULL);
+    gdk_rgba_parse(&color, "green");
+    gtk_text_buffer_create_tag(out_buff, "color_green", "foreground-rgba", &color, NULL);
+    gtk_text_buffer_create_tag(out_buff, "weight_normal", "weight", PANGO_WEIGHT_NORMAL, NULL);
+    gtk_text_buffer_create_tag(out_buff, "weight_bold", "weight", PANGO_WEIGHT_BOLD, NULL);
+    gtk_text_buffer_create_tag(out_buff, "weight_thin", "weight", PANGO_WEIGHT_THIN, NULL);
+
+    gtk_text_view_set_buffer(client->output, out_buff);
+}
 
 gboolean init_app(ClientGuiApp *app)
 {
@@ -261,6 +348,9 @@ gboolean init_app(ClientGuiApp *app)
     g_signal_connect(app->send_button, "clicked", G_CALLBACK(send_button_clicked), app);
     // Make input react to enter key press.
     g_signal_connect(app->input, "key_press_event", G_CALLBACK(on_key_press), app);
+
+    // Set up the colors and styles for the output text window.
+    set_up_output_buffer();
 
     // Clean up after using the builder.
     gtk_builder_connect_signals(builder, app);
