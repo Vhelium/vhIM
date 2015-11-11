@@ -10,15 +10,21 @@
 int process_offline_command(char *input_buffer, int (*exec_cmd)(int, char**))
 {
     int ret = 0;
-    if(input_buffer[0] == '/'){
+    if (input_buffer[0] == '/'){
         char *cmd = input_buffer + 1;
         char *type = NULL;
-        if(!next_word(&cmd, &type)) return ret;
-        if(
+        if (!next_word(&cmd, &type)) {
+            return ret;
+        }
+        else {
+            free(type);
+        }
+        if (
                 // List of commands to accept when not connected.
+                !strcmp(type, "exit") ||
                 !strcmp(type, "help") ||
                 !strcmp(type, "connect")
-          ){
+          ) {
             process_command(input_buffer, exec_cmd);
             ret = 1;
         }
@@ -260,6 +266,10 @@ int process_command(char *input_buffer, int (*exec_cmd)(int, char**))
         else
             ret = 2;
         free(gid);
+    }
+    /* exit */
+    else if (strcmp(type, "exit") == 0) {
+        exec_cmd(CMD_EXIT, NULL);
     }
     /* invalid command */
     else

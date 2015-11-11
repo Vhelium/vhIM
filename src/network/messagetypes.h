@@ -36,5 +36,6 @@
 #define CMD_DISCONNECT 2002
 #define CMD_HELP 2003
 #define CMD_INVALID 2004
+#define CMD_EXIT 2005
 
 #endif

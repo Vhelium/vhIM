@@ -13,7 +13,13 @@
 
 #include "../server/server_user.h"
 
+static int client_running = 1;
 static int port_default;
+
+static void cb_exit(void)
+{
+    client_running = 0;
+}
 
 static void cb_welcome (const char *msg)
 {
@@ -145,6 +151,11 @@ static int execute_command(int type, char *argv[])
 {
     switch (type)
     {
+        case CMD_EXIT: {
+            cb_exit();
+        }
+        break;
+
         case MSG_CMD_KICK_ID: {
             /* check if passed argument is a number */
             if (!is_decimal_number(argv[0]))
@@ -301,7 +312,7 @@ static char input_buffer[1024+1];
 
 static void process_input()
 {
-    for(;;){
+    while (client_running) {
         int n = read_line(input_buffer, 1024);
         if(n > 0){
             if(cl_get_is_connected_synced()){
@@ -319,6 +330,7 @@ static void process_input()
 
 void cl_ui_cons_start(cb_generic_t *cbs, int port)
 {
+    client_running = 1;
     port_default = port;
 
     /* initialize callbacks: */

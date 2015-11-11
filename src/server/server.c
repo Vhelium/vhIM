@@ -130,9 +130,9 @@ int main(void)
 
     server_ch_listen(&cb_cl_cntd, &cb_msg_rcv, &cb_cl_dc);
 
-    server_destroy();
     server_ch_destroy();
     sql_ch_destroy();
+    server_destroy();
 
     return 0;
 }
