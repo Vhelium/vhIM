@@ -217,15 +217,16 @@ static int execute_command(int type, char *argv[])
 
 static void process_input(char *input, int length)
 {
-    // FIXME: Add connection check before executing command!!
     if(length > 0){
-        if(input[0] == '/'){
-            process_command(input, &execute_command);
-        }else if(cl_get_is_connected_synced()){
-            cl_exec_broadcast(input);
+        if(cl_get_is_connected_synced()){
+            if(input[0] == '/')
+                process_command(input, &execute_command);
+            else
+                cl_exec_broadcast(input);
         }else{
-            gui_print("Not connected to a server.\n"
-                    , NULL, GUI_MSG_TYPE_ERROR);
+            if(!process_offline_command(input, &execute_command))
+                gui_print("Not connected to a server.\n"
+                        , NULL, GUI_MSG_TYPE_ERROR);
         }
     }
 }

@@ -235,18 +235,18 @@ static char input_buffer[1024+1];
 
 static void process_input()
 {
-    for(;;) {
+    for(;;){
         int n = read_line(input_buffer, 1024);
-        if (n>0) {
-            if (input_buffer[0] == '/') {
-                process_command(input_buffer, &execute_command);
-            }
-            /* check if connected to a server */
-            else if(cl_get_is_connected_synced()) {
-                cl_exec_broadcast(input_buffer);
-            }
-            else
-                printf("Not connected to a server.\n");
+        if(n > 0){
+            if(cl_get_is_connected_synced()){
+                if(input_buffer[0] == '/')
+                   process_command(input_buffer, &execute_command);
+                else
+                   cl_exec_broadcast(input_buffer); 
+            }else{
+                if(!process_offline_command(input_buffer, &execute_command))
+                    printf("Not connected to a server.\n");
+            } 
         }
     }
 }
