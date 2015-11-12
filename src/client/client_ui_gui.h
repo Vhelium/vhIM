@@ -28,6 +28,20 @@ typedef struct ClientGuiApp {
 /* ================== Functions ================ */
 
 /*
+ * Function: gui_quit_request
+ * --------------------------
+ * Description:
+ * Prompt the user if he really wants to quit the
+ * application, and if the answer is a yes, exit 
+ * properly.
+ *
+ * Arguments: void
+ *
+ * Returns: void
+ */
+void gui_quit_request(void);
+
+/*
  * Function: gui_print
  * -------------------
  * Description:

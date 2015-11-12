@@ -23,7 +23,7 @@ static GtkTextBuffer *out_buff;
 
 static void cb_exit(void)
 {
-    // TODO
+    gui_quit_request();
 }
 
 static void cb_welcome (const char *msg)
@@ -175,7 +175,7 @@ static void cb_client_connected(void)
 
 static void cb_client_destroyed(void)
 {
-    // TODO
+    // TODO: Possible cleanup code?...
 }
 
 /* ==================================================================== */
@@ -296,6 +296,12 @@ static void process_input(char *input, int length)
 }
 
 /* =========================== GUI-HANDLERS =========================== */
+
+void gui_quit_request(void)
+{
+    // TODO: Ask for user confirmation before quiting. 
+    gtk_main_quit();
+}
 
 void gui_print(const char *msg, const char *origin, int type)
 {
