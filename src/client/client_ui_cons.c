@@ -132,12 +132,12 @@ static void cb_txt_group(int gid, int uid, const char *msg)
 
 static void cb_client_disconnected(void)
 {
-    printf("Connected!\n");
+    printf("Disconnected!\n");
 }
 
 static void cb_client_connected(void)
 {
-    printf("Disconnected!\n");
+    printf("Connected!\n");
 }
 
 static void cb_client_destroyed(void)
@@ -264,7 +264,7 @@ static int execute_command(int type, char *argv[])
 
         case MSG_GROUP_REMOVE_USER: {
             if (is_decimal_number(argv[0]) && is_decimal_number(argv[1])) {
-                cl_exec_group_add_user(atoi(argv[0]), atoi(argv[1]));
+                cl_exec_group_remove_user(atoi(argv[0]), atoi(argv[1]));
             }
             else
                 printf("invalid arguments.\n");

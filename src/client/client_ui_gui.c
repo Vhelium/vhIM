@@ -21,6 +21,11 @@ static int port_default;
 static ClientGuiApp *client;
 static GtkTextBuffer *out_buff;
 
+static void cb_exit(void)
+{
+    // TODO
+}
+
 static void cb_welcome (const char *msg)
 {
     char print_msg[50];
@@ -138,6 +143,43 @@ static void cb_friend_offline(int uid)
     gui_print(print_msg, NULL, GUI_MSG_TYPE_INFO);
 }
 
+static void cb_group_dump_active(const char *msg)
+{
+    // TODO
+}
+
+static void cb_group_delete(int gid)
+{
+    // TODO
+}
+
+static void cb_group_owner_changed(int gid, int uid)
+{
+    // TODO
+}
+
+static void cb_txt_group(int git, int uid, const char *msg)
+{
+    // TODO
+}
+
+static void cb_client_disconnected(void)
+{
+    gui_print("Disconnected!\n", NULL, GUI_MSG_TYPE_INFO);
+}
+
+static void cb_client_connected(void)
+{
+    gui_print("Connected!\n", NULL, GUI_MSG_TYPE_INFO);
+}
+
+static void cb_client_destroyed(void)
+{
+    // TODO
+}
+
+/* ==================================================================== */
+
 static int execute_command(int type, char *argv[])
 {
     switch(type){
@@ -163,6 +205,9 @@ static int execute_command(int type, char *argv[])
             break;
         case MSG_FRIENDS:
             cl_exec_friends();
+            break;
+        case CMD_EXIT:
+            cb_exit();
             break;
         case CMD_CONNECT:
             if(argv[1] != NULL && !is_decimal_number(argv[1])) return 3;
@@ -199,8 +244,27 @@ static int execute_command(int type, char *argv[])
             if(is_decimal_number(argv[0]) && is_decimal_number(argv[1]))
                 cl_exec_group_add_user(atoi(argv[0]), atoi(argv[1]));
             else
-                gui_print("Error, invalid arguments.\n"
+                gui_print("Invalid arguments.\n"
                         , NULL, GUI_MSG_TYPE_ERROR);
+            break;
+        case MSG_GROUP_REMOVE_USER:
+            if(is_decimal_number(argv[0]) && is_decimal_number(argv[1]))
+                cl_exec_group_remove_user(atoi(argv[0]), atoi(argv[1]));
+            else
+                gui_print("Invalid arguments.\n"
+                        , NULL, GUI_MSG_TYPE_ERROR);
+            break;
+        case MSG_TXT_GROUP:
+            if(!is_decimal_number(argv[0]))
+                return 3;
+            cl_exec_group_send(atoi(argv[0]), argv[1]);
+            break;
+        case MSG_DUMP_ACTIVE_GROUPS:
+            cl_exec_group_dump_active();
+            break;
+        case MSG_GROUP_WHO:
+            if(is_decimal_number(argv[0]))
+                cl_exec_group_who(atoi(argv[0]));
             break;
         case CMD_HELP:
             // TODO: Handle help command.
@@ -410,6 +474,13 @@ int cl_ui_gui_start(cb_generic_t *cbs, int port)
     cbs[MSG_REMOVE_FRIEND] = (cb_generic_t)&cb_remove_friend;
     cbs[MSG_FRIEND_ONLINE] = (cb_generic_t)&cb_friend_online;
     cbs[MSG_FRIEND_OFFLINE] = (cb_generic_t)&cb_friend_offline;
+    cbs[MSG_DUMP_ACTIVE_GROUPS] = (cb_generic_t)&cb_group_dump_active;
+    cbs[MSG_GROUP_DELETE] = (cb_generic_t)&cb_group_delete;
+    cbs[MSG_GROUP_OWNER_CHANGED] = (cb_generic_t)&cb_group_owner_changed;
+    cbs[MSG_TXT_GROUP] = (cb_generic_t)&cb_txt_group;
+    cbs[CB_CLIENT_DISCONNECTED] = (cb_generic_t)&cb_client_disconnected;
+    cbs[CB_CLIENT_CONNECTED] = (cb_generic_t)&cb_client_connected;
+    cbs[CB_CLIENT_DESTROYED] = (cb_generic_t)&cb_client_destroyed;
 
     // Initialize the GUI.
     client = g_slice_new(ClientGuiApp);
