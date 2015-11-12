@@ -9,6 +9,7 @@
 #define GUI_MSG_TYPE_USER 1
 #define GUI_MSG_TYPE_SERVER 2
 #define GUI_MSG_TYPE_ERROR 3
+#define GUI_MSG_TYPE_BROADCAST 4
 
 /* ================== Structs ================== */
 

@@ -283,10 +283,12 @@ static void process_input(char *input, int length)
 {
     if(length > 0){
         if(cl_get_is_connected_synced()){
-            if(input[0] == '/')
+            if(input[0] == '/'){
                 process_command(input, &execute_command);
-            else
+            }else{
                 cl_exec_broadcast(input);
+                gui_print(strcat(input, "\n"), "You", GUI_MSG_TYPE_BROADCAST);
+            }
         }else{
             if(!process_offline_command(input, &execute_command))
                 gui_print("Not connected to a server.\n"
@@ -324,15 +326,21 @@ void gui_print(const char *msg, const char *origin, int type)
             "weight_normal", "color_blue", NULL);
 
     // Add origin tag to the message.
-    if(type == GUI_MSG_TYPE_USER){
+    if(type == GUI_MSG_TYPE_USER ||
+            type == GUI_MSG_TYPE_BROADCAST){
         // Check if the origin exists.
         if(!origin) return;
         // TODO: Use user specific color (Session dependent).
         char print_msg[50];
         sprintf(print_msg, "[%.40s]>>\t", origin);
-        gtk_text_buffer_insert_with_tags_by_name(
-                out_buff, &end, print_msg, -1,
-                "weight_bold", "color_orange", NULL);
+        if(type == GUI_MSG_TYPE_USER)
+            gtk_text_buffer_insert_with_tags_by_name(
+                    out_buff, &end, print_msg, -1,
+                    "weight_bold", "color_black", NULL);
+        else
+            gtk_text_buffer_insert_with_tags_by_name(
+                    out_buff, &end, print_msg, -1,
+                    "weight_bold", "color_orange", NULL);
     }else{
         switch(type){
             case GUI_MSG_TYPE_INFO:
