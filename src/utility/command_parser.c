@@ -13,16 +13,17 @@ int process_offline_command(char *input_buffer, int (*exec_cmd)(int, char**))
     if (input_buffer[0] == '/'){
         char *cmd = input_buffer + 1;
         char *type = NULL;
-        if (!next_word(&cmd, &type))
-            return ret;
-        if (
-                // List of commands to accept when not connected.
-                !strcmp(type, "exit") ||
-                !strcmp(type, "help") ||
-                !strcmp(type, "connect")
-          ) {
-            process_command(input_buffer, exec_cmd);
-            ret = 1;
+        if (next_word(&cmd, &type)) {
+            if (
+                    // List of commands to accept when not connected.
+                    !strcmp(type, "exit") ||
+                    !strcmp(type, "help") ||
+                    !strcmp(type, "connect")
+               ) {
+                process_command(input_buffer, exec_cmd);
+                ret = 1;
+            }
+            free(type);
         }
     }
     return ret;
