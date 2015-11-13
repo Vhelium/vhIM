@@ -20,13 +20,107 @@
  * The basic application type.
  */
 typedef struct ClientGuiApp {
-    GtkWidget *main_window, *menu_bar, *status_bar;
+    GtkWindow *main_window, *connect_window;
+    GtkWidget *menu_bar, *status_bar;
     GtkTextView *output, *input; 
-    GtkButton *send_button;
+    GtkButton *send_button, *connect_disconnect_button,
+              *connect_cancel_button, *connect_confirm_button;
+    GtkEntry *connect_host_input, *connect_port_input;
     guint status_bar_context_id;
 } ClientGuiApp;
 
 /* ================== Functions ================ */
+
+/*
+ * Function: connect_confirm
+ * -------------------------
+ * Description:
+ * Handle the case where the "confirm" button
+ * is clicked in the connection popup window.
+ * This executes a connect command to the server
+ * with the given input arguments.
+ *
+ * Arguments: void
+ *
+ * Returns: void
+ */
+void connect_confirm(void);
+
+/*
+ * Function: close_connect_window
+ * ------------------------------
+ * Description:
+ * Close the connect-window.
+ *
+ * Arguments: void
+ *
+ * Returns: void
+ */
+void close_connect_window(void);
+
+/*
+ * Function: show_connect_window
+ * -----------------------------
+ * Description:
+ * Show the connect-window.
+ *
+ * Arguments: void
+ *
+ * Returns: void
+ */
+void show_connect_window(void);
+
+/*
+ * Function: config_connect_button
+ * -------------------------------
+ * Description:
+ * Set up the Connect/Disconnect button to do a 
+ * connect action upon being clicked.
+ *
+ * Arguments: void
+ *
+ * Returns: void
+ */
+void config_connect_button(void);
+
+/*
+ * Function: config_disconnect_button
+ * ----------------------------------
+ * Description:
+ * Set up the Connect/Disconnect button to do a
+ * disconnect action upon being clicked.
+ *
+ * Arguments: void
+ *
+ * Returns: void
+ */
+void config_disconnect_button(void);
+
+/*
+ * Function: config_connect_button
+ * -------------------------------
+ * Description:
+ * Set up the Connect/Disconnect button to do a 
+ * connect action upon being clicked.
+ *
+ * Arguments: void
+ *
+ * Returns: void
+ */
+void config_connect_button(void);
+
+/*
+ * Function: config_disconnect_button
+ * ----------------------------------
+ * Description:
+ * Set up the Connect/Disconnect button to do a
+ * disconnect action upon being clicked.
+ *
+ * Arguments: void
+ *
+ * Returns: void
+ */
+void config_disconnect_button(void);
 
 /*
  * Function: gui_quit_request

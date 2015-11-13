@@ -406,6 +406,16 @@ void send_button_clicked(GtkWidget *button, ClientGuiApp *app)
     gtk_text_view_set_buffer(app->input, buff);
 }
 
+void connect_confirm()
+{
+    char *host = (char *)gtk_entry_get_text(client->connect_host_input);
+    char *port = (char *)gtk_entry_get_text(client->connect_port_input);
+    
+    // TODO:
+
+    close_connect_window();
+}
+
 /* =========================== GUI-SETUP ============================== */
 
 void set_up_output_buffer(){
@@ -429,6 +439,28 @@ void set_up_output_buffer(){
     gtk_text_view_set_buffer(client->output, out_buff);
 }
 
+void close_connect_window(void)
+{
+    gtk_widget_hide(GTK_WIDGET(client->connect_window));
+    // TODO: Clean up input fields etc. 
+}
+
+void show_connect_window(void)
+{
+    gtk_window_present(GTK_WINDOW(client->connect_window));
+}
+
+void config_connect_button(void)
+{
+    g_signal_connect(client->connect_disconnect_button, 
+            "clicked", G_CALLBACK(show_connect_window), NULL);
+}
+
+void config_disconnect_button(void)
+{
+
+}
+
 gboolean init_app(ClientGuiApp *app)
 {
     GtkBuilder *builder;
@@ -443,11 +475,17 @@ gboolean init_app(ClientGuiApp *app)
     }
 
     // Grab and assign all necessary gtk widgets.
-    app->main_window = GTK_WIDGET(gtk_builder_get_object(builder, "main_window"));
+    app->main_window = GTK_WINDOW(gtk_builder_get_object(builder, "main_window"));
+    app->connect_window = GTK_WINDOW(gtk_builder_get_object(builder, "connect_window"));
     app->menu_bar = GTK_WIDGET(gtk_builder_get_object(builder, "menu_bar"));
     app->output = GTK_TEXT_VIEW(gtk_builder_get_object(builder, "output_text_view"));
     app->input = GTK_TEXT_VIEW(gtk_builder_get_object(builder, "input_text_view"));
     app->send_button = GTK_BUTTON(gtk_builder_get_object(builder, "input_send_button"));
+    app->connect_confirm_button = GTK_BUTTON(gtk_builder_get_object(builder, "connect_confirm_button"));
+    app->connect_cancel_button = GTK_BUTTON(gtk_builder_get_object(builder, "connect_cancel_button"));
+    app->connect_disconnect_button = GTK_BUTTON(gtk_builder_get_object(builder, "connect_disconnect_button"));
+    app->connect_host_input = GTK_ENTRY(gtk_builder_get_object(builder, "connect_host_input"));
+    app->connect_port_input = GTK_ENTRY(gtk_builder_get_object(builder, "connect_port_input"));
     app->status_bar = GTK_WIDGET(gtk_builder_get_object(builder, "status_bar"));
 
     // --------- Set action handlers ----------
@@ -456,11 +494,17 @@ gboolean init_app(ClientGuiApp *app)
     // Make input react to enter key press.
     g_signal_connect(app->input, "key_press_event", G_CALLBACK(on_key_press), app);
 
+    // Set up the connect-dialog box.
+    config_connect_button();
+    g_signal_connect(app->connect_window, "delete-event", G_CALLBACK(close_connect_window), NULL);
+    g_signal_connect(app->connect_cancel_button, "clicked", G_CALLBACK(close_connect_window), NULL);
+    g_signal_connect(app->connect_confirm_button, "clicked", G_CALLBACK(connect_confirm), NULL);
+
     // Set up the colors and styles for the output text window.
     set_up_output_buffer();
 
     // Clean up after using the builder.
-    gtk_builder_connect_signals(builder, app);
+    gtk_builder_connect_signals(builder, app->connect_window);
     g_object_unref(G_OBJECT(builder));
     
     // Set the status bar context id.
@@ -502,7 +546,7 @@ int cl_ui_gui_start(cb_generic_t *cbs, int port)
     gtk_init(NULL, NULL);
     // Try to initialize the application, return 1 on failure.
     if(init_app(client) == FALSE) return 1;
-    gtk_widget_show(client->main_window);
+    gtk_widget_show(GTK_WIDGET(client->main_window));
     // Main GTK-Appliacation loop.
     gtk_main();
     g_slice_free(ClientGuiApp, client); // Free residual memory.
