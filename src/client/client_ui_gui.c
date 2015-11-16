@@ -166,11 +166,13 @@ static void cb_txt_group(int git, int uid, const char *msg)
 static void cb_client_disconnected(void)
 {
     gui_print("Disconnected!\n", NULL, GUI_MSG_TYPE_INFO);
+    config_connect_button();
 }
 
 static void cb_client_connected(void)
 {
     gui_print("Connected!\n", NULL, GUI_MSG_TYPE_INFO);
+    config_disconnect_button();
 }
 
 static void cb_client_destroyed(void)
@@ -384,7 +386,16 @@ gboolean on_key_press(GtkWidget *widget, GdkEventKey *pKey, ClientGuiApp *app)
     // Check if the enter key was pressed.
     // If yes, do not propagate the key event (block it by returning true).
     if(pKey->type == GDK_KEY_PRESS && pKey->keyval == GDK_KEY_Return){
-        send_button_clicked(NULL, app);
+        // Check where the event came from and act accordingly.
+        if(widget == GTK_WIDGET(client->input)){
+            // Came from input-field.
+            send_button_clicked(NULL, app);
+        }else if(widget == GTK_WIDGET(client->connect_host_input) ||
+                widget == GTK_WIDGET(client->connect_port_input)){
+            // Came from connect-dialog box.
+            connect_confirm();
+        }
+       
         return TRUE;
     }
     // The key pressed was not enter. Propagate it.
@@ -408,12 +419,28 @@ void send_button_clicked(GtkWidget *button, ClientGuiApp *app)
 
 void connect_confirm()
 {
-    char *host = (char *)gtk_entry_get_text(client->connect_host_input);
-    char *port = (char *)gtk_entry_get_text(client->connect_port_input);
+    // Grab the text from the input fields in the connection dialogue.
+    char *host_in = (char *)gtk_entry_get_text(client->connect_host_input);
+    char *port_in = (char *)gtk_entry_get_text(client->connect_port_input);
     
-    // TODO:
+    // Read the default port number and only replace it if a port was entered.
+    int port = port_default;
+    if(!strcmp(port_in, "") && is_decimal_number(port_in))
+        port = atoi(port_in);
+
+    // Execute connection command with given inputs.
+    if(cl_exec_connect(host_in, port)){
+        gui_print("Error connecting to host.\n",
+                NULL, GUI_MSG_TYPE_ERROR);
+        exit(1);
+    }
 
     close_connect_window();
+}
+
+void disconnect_clicked()
+{
+    cl_exec_disconnect();
 }
 
 /* =========================== GUI-SETUP ============================== */
@@ -442,23 +469,52 @@ void set_up_output_buffer(){
 void close_connect_window(void)
 {
     gtk_widget_hide(GTK_WIDGET(client->connect_window));
-    // TODO: Clean up input fields etc. 
+    
+    // Clear the entries in the connect-window.
+    gtk_entry_set_buffer(client->connect_host_input,
+            gtk_entry_buffer_new("", -1));
+    gtk_entry_set_buffer(client->connect_port_input,
+            gtk_entry_buffer_new("", -1));
 }
 
 void show_connect_window(void)
 {
     gtk_window_present(GTK_WINDOW(client->connect_window));
+
+    // Set the correct focus.
+    gtk_widget_grab_focus(GTK_WIDGET(client->connect_host_input));
 }
 
 void config_connect_button(void)
 {
-    g_signal_connect(client->connect_disconnect_button, 
+    gtk_button_set_label(client->connect_disconnect_button,
+            "Connect");
+    
+    // Disconnect the old signal hander if it exists.
+    if(client->connect_disconnect_handler_id > 0)
+        g_signal_handler_disconnect(client->connect_disconnect_button,
+                client->connect_disconnect_handler_id);
+
+    // Connect the correct signal handler for connection.
+    client->connect_disconnect_handler_id = g_signal_connect(
+            client->connect_disconnect_button, 
             "clicked", G_CALLBACK(show_connect_window), NULL);
 }
 
 void config_disconnect_button(void)
 {
+    gtk_button_set_label(client->connect_disconnect_button,
+            "Disconnect");
 
+    // Disconnect the old signal handler if it exists.
+    if(client->connect_disconnect_handler_id > 0)
+        g_signal_handler_disconnect(client->connect_disconnect_button,
+                client->connect_disconnect_handler_id);
+
+    // Connect the correct signal handler for disconnection.
+    client->connect_disconnect_handler_id = g_signal_connect(
+            client->connect_disconnect_button,
+            "clicked", G_CALLBACK(disconnect_clicked), NULL);
 }
 
 gboolean init_app(ClientGuiApp *app)
@@ -495,10 +551,15 @@ gboolean init_app(ClientGuiApp *app)
     g_signal_connect(app->input, "key_press_event", G_CALLBACK(on_key_press), app);
 
     // Set up the connect-dialog box.
+    client->connect_disconnect_handler_id = 0;
     config_connect_button();
     g_signal_connect(app->connect_window, "delete-event", G_CALLBACK(close_connect_window), NULL);
+    g_signal_connect(app->connect_host_input, "key_press_event", G_CALLBACK(on_key_press), app);
+    g_signal_connect(app->connect_port_input, "key_press_event", G_CALLBACK(on_key_press), app);
     g_signal_connect(app->connect_cancel_button, "clicked", G_CALLBACK(close_connect_window), NULL);
     g_signal_connect(app->connect_confirm_button, "clicked", G_CALLBACK(connect_confirm), NULL);
+    gtk_button_set_focus_on_click(app->connect_cancel_button, FALSE);
+    gtk_button_set_focus_on_click(app->connect_confirm_button, FALSE);
 
     // Set up the colors and styles for the output text window.
     set_up_output_buffer();

@@ -27,6 +27,7 @@ typedef struct ClientGuiApp {
               *connect_cancel_button, *connect_confirm_button;
     GtkEntry *connect_host_input, *connect_port_input;
     guint status_bar_context_id;
+    gulong connect_disconnect_handler_id;
 } ClientGuiApp;
 
 /* ================== Functions ================ */
