@@ -20,17 +20,85 @@
  * The basic application type.
  */
 typedef struct ClientGuiApp {
-    GtkWindow *main_window, *connect_window;
+    GtkWindow *main_window, *connect_window, *login_window;
     GtkWidget *menu_bar, *status_bar;
     GtkTextView *output, *input; 
     GtkButton *send_button, *connect_disconnect_button,
-              *connect_cancel_button, *connect_confirm_button;
-    GtkEntry *connect_host_input, *connect_port_input;
+              *connect_cancel_button, *connect_confirm_button,
+              *login_cancel_button, *login_confirm_button,
+              *login_logout_button;
+    GtkEntry *connect_host_input, *connect_port_input,
+        *login_username_input, *login_password_input;
     guint status_bar_context_id;
-    gulong connect_disconnect_handler_id;
+    gulong connect_disconnect_handler_id, login_logout_handler_id;
 } ClientGuiApp;
 
 /* ================== Functions ================ */
+
+/*
+ * Function: login_confirm
+ * -------------------------
+ * Description:
+ * Handle the case where the "confirm" button
+ * is clicked in the login popup window.
+ * This executes a login command to the server
+ * with the given input arguments.
+ *
+ * Arguments: void
+ *
+ * Returns: void
+ */
+void login_confirm(void);
+
+/*
+ * Function: close_login_window
+ * ----------------------------
+ * Description:
+ * Close the login-window.
+ *
+ * Arguments: void
+ *
+ * Returns: void
+ */
+void close_login_window(void);
+
+/*
+ * Function: show_login_window
+ * ---------------------------
+ * Description:
+ * Show the login-window.
+ *
+ * Arguments: void
+ *
+ * Returns: void
+ */
+void show_login_window(void);
+
+/*
+ * Function: config_login_button
+ * -----------------------------
+ * Description:
+ * Set up the Login/Logout button to do a 
+ * login action upon being clicked.
+ *
+ * Arguments: void
+ *
+ * Returns: void
+ */
+void config_login_button(void);
+
+/*
+ * Function: config_logout_button
+ * ------------------------------
+ * Description:
+ * Set up the Login/Logout button to do a
+ * logout action upon being clicked.
+ *
+ * Arguments: void
+ *
+ * Returns: void
+ */
+void config_logout_button(void);
 
 /*
  * Function: connect_confirm
@@ -70,32 +138,6 @@ void close_connect_window(void);
  * Returns: void
  */
 void show_connect_window(void);
-
-/*
- * Function: config_connect_button
- * -------------------------------
- * Description:
- * Set up the Connect/Disconnect button to do a 
- * connect action upon being clicked.
- *
- * Arguments: void
- *
- * Returns: void
- */
-void config_connect_button(void);
-
-/*
- * Function: config_disconnect_button
- * ----------------------------------
- * Description:
- * Set up the Connect/Disconnect button to do a
- * disconnect action upon being clicked.
- *
- * Arguments: void
- *
- * Returns: void
- */
-void config_disconnect_button(void);
 
 /*
  * Function: config_connect_button

@@ -31,6 +31,7 @@ static void cb_welcome (const char *msg)
     char print_msg[50];
     sprintf(print_msg, "Welcome, %.35s!\n", msg);
     gui_print(print_msg, NULL, GUI_MSG_TYPE_SERVER);
+    config_logout_button();
 }
 
 static void cb_auth_failed(const char *msg, int res)
@@ -167,12 +168,18 @@ static void cb_client_disconnected(void)
 {
     gui_print("Disconnected!\n", NULL, GUI_MSG_TYPE_INFO);
     config_connect_button();
+
+    gtk_widget_set_sensitive(GTK_WIDGET(client->login_logout_button),
+                FALSE);
 }
 
 static void cb_client_connected(void)
 {
     gui_print("Connected!\n", NULL, GUI_MSG_TYPE_INFO);
     config_disconnect_button();
+
+    gtk_widget_set_sensitive(GTK_WIDGET(client->login_logout_button),
+                TRUE);
 }
 
 static void cb_client_destroyed(void)
@@ -394,6 +401,9 @@ gboolean on_key_press(GtkWidget *widget, GdkEventKey *pKey, ClientGuiApp *app)
                 widget == GTK_WIDGET(client->connect_port_input)){
             // Came from connect-dialog box.
             connect_confirm();
+        }else if(widget == GTK_WIDGET(client->login_username_input) ||
+                widget == GTK_WIDGET(client->login_password_input)){
+            login_confirm();
         }
        
         return TRUE;
@@ -438,9 +448,26 @@ void connect_confirm()
     close_connect_window();
 }
 
+void login_confirm()
+{
+    // Grab the text from the input fields in the login dialogue.
+    char *uname_in = (char *)gtk_entry_get_text(client->login_username_input);
+    char *passw_in = (char *)gtk_entry_get_text(client->login_password_input);
+
+    cl_exec_req_login(uname_in, passw_in);
+
+    close_login_window();
+}
+
 void disconnect_clicked()
 {
     cl_exec_disconnect();
+}
+
+void logout_clicked()
+{
+    cl_exec_logout();
+    config_login_button(); // TODO: Add logout callback!!
 }
 
 /* =========================== GUI-SETUP ============================== */
@@ -466,6 +493,17 @@ void set_up_output_buffer(){
     gtk_text_view_set_buffer(client->output, out_buff);
 }
 
+void close_login_window(void)
+{
+    gtk_widget_hide(GTK_WIDGET(client->login_window));
+
+    // Clear the entries in the login-window.
+    gtk_entry_set_buffer(client->login_username_input,
+            gtk_entry_buffer_new("", -1));
+    gtk_entry_set_buffer(client->login_password_input,
+            gtk_entry_buffer_new("", -1));
+}
+
 void close_connect_window(void)
 {
     gtk_widget_hide(GTK_WIDGET(client->connect_window));
@@ -477,12 +515,52 @@ void close_connect_window(void)
             gtk_entry_buffer_new("", -1));
 }
 
+void show_login_window(void)
+{
+    gtk_window_present(GTK_WINDOW(client->login_window));
+
+    // Set the correct focus.
+    gtk_widget_grab_focus(GTK_WIDGET(client->login_username_input));
+}
+
 void show_connect_window(void)
 {
     gtk_window_present(GTK_WINDOW(client->connect_window));
 
     // Set the correct focus.
     gtk_widget_grab_focus(GTK_WIDGET(client->connect_host_input));
+}
+
+void config_login_button(void)
+{
+    gtk_button_set_label(client->login_logout_button,
+            "Login");
+
+    // Disconnect the old signal handler if it exists.
+    if(client->login_logout_handler_id > 0)
+        g_signal_handler_disconnect(client->login_logout_button,
+                client->login_logout_handler_id);
+
+    // Connect the correct signal handler for login.
+    client->login_logout_handler_id = g_signal_connect(
+            client->login_logout_button,
+            "clicked", G_CALLBACK(show_login_window), NULL);
+}
+
+void config_logout_button(void)
+{
+    gtk_button_set_label(client->login_logout_button,
+            "Logout");
+
+    // Disconnect the old signal handler if it exists.
+    if(client->login_logout_handler_id > 0)
+        g_signal_handler_disconnect(client->login_logout_button,
+                client->login_logout_handler_id);
+
+    // Connect the correct signal handler for logout.
+    client->login_logout_handler_id = g_signal_connect(
+            client->login_logout_button,
+            "clicked", G_CALLBACK(logout_clicked), NULL);
 }
 
 void config_connect_button(void)
@@ -533,15 +611,21 @@ gboolean init_app(ClientGuiApp *app)
     // Grab and assign all necessary gtk widgets.
     app->main_window = GTK_WINDOW(gtk_builder_get_object(builder, "main_window"));
     app->connect_window = GTK_WINDOW(gtk_builder_get_object(builder, "connect_window"));
+    app->login_window = GTK_WINDOW(gtk_builder_get_object(builder, "login_window"));
     app->menu_bar = GTK_WIDGET(gtk_builder_get_object(builder, "menu_bar"));
     app->output = GTK_TEXT_VIEW(gtk_builder_get_object(builder, "output_text_view"));
     app->input = GTK_TEXT_VIEW(gtk_builder_get_object(builder, "input_text_view"));
     app->send_button = GTK_BUTTON(gtk_builder_get_object(builder, "input_send_button"));
     app->connect_confirm_button = GTK_BUTTON(gtk_builder_get_object(builder, "connect_confirm_button"));
     app->connect_cancel_button = GTK_BUTTON(gtk_builder_get_object(builder, "connect_cancel_button"));
+    app->login_confirm_button = GTK_BUTTON(gtk_builder_get_object(builder, "login_confirm_button"));
+    app->login_cancel_button = GTK_BUTTON(gtk_builder_get_object(builder, "login_cancel_button"));
     app->connect_disconnect_button = GTK_BUTTON(gtk_builder_get_object(builder, "connect_disconnect_button"));
+    app->login_logout_button = GTK_BUTTON(gtk_builder_get_object(builder, "login_logout_button"));
     app->connect_host_input = GTK_ENTRY(gtk_builder_get_object(builder, "connect_host_input"));
     app->connect_port_input = GTK_ENTRY(gtk_builder_get_object(builder, "connect_port_input"));
+    app->login_username_input = GTK_ENTRY(gtk_builder_get_object(builder, "login_username_input"));
+    app->login_password_input = GTK_ENTRY(gtk_builder_get_object(builder, "login_password_input"));
     app->status_bar = GTK_WIDGET(gtk_builder_get_object(builder, "status_bar"));
 
     // --------- Set action handlers ----------
@@ -560,6 +644,18 @@ gboolean init_app(ClientGuiApp *app)
     g_signal_connect(app->connect_confirm_button, "clicked", G_CALLBACK(connect_confirm), NULL);
     gtk_button_set_focus_on_click(app->connect_cancel_button, FALSE);
     gtk_button_set_focus_on_click(app->connect_confirm_button, FALSE);
+
+    // Set up the login-dialogue box.
+    client->login_logout_handler_id = 0;
+    config_login_button();
+    gtk_widget_set_sensitive(GTK_WIDGET(app->login_logout_button), FALSE);
+    g_signal_connect(app->login_window, "delete-event", G_CALLBACK(close_login_window), NULL);
+    g_signal_connect(app->login_username_input, "key_press_event", G_CALLBACK(on_key_press), app);
+    g_signal_connect(app->login_password_input, "key_press_event", G_CALLBACK(on_key_press), app);
+    g_signal_connect(app->login_cancel_button, "clicked", G_CALLBACK(close_login_window), NULL);
+    g_signal_connect(app->login_confirm_button, "clicked", G_CALLBACK(login_confirm), NULL);
+    gtk_button_set_focus_on_click(app->login_cancel_button, FALSE);
+    gtk_button_set_focus_on_click(app->login_confirm_button, FALSE);
 
     // Set up the colors and styles for the output text window.
     set_up_output_buffer();
